@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中建八局数字供应链 - 海外项目数据集指标填报</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============ 顶部导航栏（对齐 DSC 参照页样式） ============ -->
+  <header class="dsc-header">
+    <div class="dsc-header__logo">中建八局数字供应链</div>
+    <nav class="dsc-header__nav">
+      <div class="dsc-header__nav-item">首页</div>
+      <div class="dsc-header__nav-item">智选资源</div>
+      <div class="dsc-header__nav-item">智慧采购</div>
+      <div class="dsc-header__nav-item">智能物管</div>
+      <div class="dsc-header__nav-item dsc-header__nav-item--active">智慧运营</div>
+    </nav>
+    <div class="dsc-header__right">
+      <div class="dsc-header__recycle" title="站内信">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M8 1.8a4 4 0 0 0-4 4v2.5l-1.5 2.5H13.5L12 8.3V5.8a4 4 0 0 0-4-4z"/>
+          <path d="M5.5 13a2.5 2.5 0 0 0 5 0"/>
+        </svg>
+        <span id="msgBadge">5</span>
+      </div>
+      <!-- 角色视角切换（原型演示用：DSC 系统无此入口，功能权限由系统功能项授权控制，此处仅示意角色差异）
+           左侧「海外填报」菜单为全量展示、不随视角变化；切换视角只影响页面内的数据范围与操作权限 -->
+      <div class="dsc-role" id="roleSwitcher" title="原型演示：仅用于对比不同角色在页面内的数据范围与操作权限；真实系统无角色切换，功能权限由系统功能项授权控制">
+        <div class="dsc-role__label">视角<span class="dsc-role__badge">演示</span></div>
+        <div class="dsc-role__current" id="roleCurrent">
+          <span id="roleName">局报送管理员</span>
+          <span class="dsc-role__caret"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></span>
+        </div>
+        <div class="dsc-role__menu" id="roleMenu">
+          <!-- 角色列表由 JS 渲染 -->
+        </div>
+      </div>
+      <div class="dsc-header__user" id="headerUser">
+        <div class="dsc-header__avatar"></div>
+        <span id="userName">王建国 · 局采购管理部</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ 左侧导航菜单（对齐 DSC 参照页样式） ============ -->
+  <aside class="dsc-sidebar" id="sidebar">
+    <ul class="dsc-sidebar__menu">
+      <!-- 参照页既有菜单 -->
+      <li class="dsc-sidebar__menu-item dsc-sidebar__menu-item--plain" data-nav="platform">
+        <span class="dsc-sidebar__menu-icon"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="1.5" y="1.5" width="13" height="13" rx="1.5"/><path d="M1.5 6h13M6 6v8.5"/></svg></span>
+        <span class="dsc-sidebar__menu-text">数据大屏</span>
+      </li>
+      <li class="dsc-sidebar__menu-item dsc-sidebar__menu-item--plain" data-nav="platform">
+        <span class="dsc-sidebar__menu-icon"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.5"/><path d="M8 1.5v13M1.5 8h13"/></svg></span>
+        <span class="dsc-sidebar__menu-text">数据全景</span>
+      </li>
+      <li class="dsc-sidebar__menu-item dsc-sidebar__menu-item--plain" data-nav="platform">
+        <span class="dsc-sidebar__menu-icon"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5L15 14H1z"/><path d="M8 6v3.2M8 11.6v.2" stroke-linecap="round"/></svg></span>
+        <span class="dsc-sidebar__menu-text">合规预警</span>
+      </li>
+      <li class="dsc-sidebar__menu-item dsc-sidebar__menu-item--plain" data-nav="platform">
+        <span class="dsc-sidebar__menu-icon"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="1.8"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8h1.5M13 8h1.5M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M3.6 12.4l1.1-1.1M11.3 4.7l1.1-1.1"/></svg></span>
+        <span class="dsc-sidebar__menu-text">智慧运营配置</span>
+      </li>
+      <li class="dsc-sidebar__menu-item dsc-sidebar__menu-item--plain" data-nav="platform">
+        <span class="dsc-sidebar__menu-icon"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 1.5h9l3 3v10h-12z"/><path d="M11.5 1.5v3h3M5 6h6M5 8.5h6M5 11h4"/></svg></span>
+        <span class="dsc-sidebar__menu-text">分析报告</span>
+      </li>
+      <li class="dsc-sidebar__menu-item dsc-sidebar__menu-item--plain" data-nav="platform">
+        <span class="dsc-sidebar__menu-icon"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 11.5v-7a1.5 1.5 0 0 1 3 0v6a1.5 1.5 0 0 0 3 0v-7"/><path d="M7.5 4.5h1.5a1.5 1.5 0 0 1 1.5 1.5v6"/></svg></span>
+        <span class="dsc-sidebar__menu-text">智链通</span>
+      </li>
+    </ul>
+
+    <!-- 海外填报分组（本原型功能入口） -->
+    <div class="dsc-sidebar__group-head dsc-sidebar__group-head--active" id="hytbGroupHead">
+      <span class="dsc-sidebar__menu-icon"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 1.5h11v13h-11z"/><path d="M5 4.5h6M5 7.5h6M5 10.5h3.5"/></svg></span>
+      <span class="dsc-sidebar__menu-text">海外填报</span>
+      <span class="dsc-sidebar__caret dsc-sidebar__caret--open" id="hytbCaret"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg></span>
+    </div>
+    <ul class="dsc-sidebar__submenu dsc-sidebar__submenu--open" id="hytbSubmenu">
+      <!-- 子菜单由 JS 全量渲染（真实系统按系统功能项授权控制可见性） -->
+    </ul>
+
+    <div class="dsc-sidebar__toggle" id="sidebarToggle" title="收起菜单">
+      <span id="toggleIcon"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"><path d="M1.5 4h13M1.5 8h13M1.5 12h13"/></svg></span>
+    </div>
+  </aside>
+
+  <!-- ============ 主内容区 ============ -->
+  <main class="dsc-main" id="mainContent">
+    <!-- 面包屑：位置保持内容区顶部，背景与顶部导航同一蓝色（同一背景区域，白字） -->
+    <div class="dsc-breadcrumb">
+      首页 &gt; 智慧运营 &gt; <span id="breadcrumbPage">报送任务管理</span>
+    </div>
+
+    <!-- 页面内容容器 -->
+    <div class="dsc-content" id="pageContainer">
+      <!-- 动态渲染 -->
+    </div>
+  </main>
+
+  <!-- ============ 模态框 ============ -->
+  <div class="dsc-modal-overlay" id="modalOverlay">
+    <div class="dsc-modal">
+      <div class="dsc-modal__header">
+        <span id="modalTitle">标题</span>
+        <span class="dsc-modal__close" id="modalClose">✕</span>
+      </div>
+      <div class="dsc-modal__body" id="modalBody">
+        <!-- 动态填充 -->
+      </div>
+      <div class="dsc-modal__footer" id="modalFooter">
+        <button class="dsc-btn dsc-btn--default" id="modalCancel">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 全局提示（Toast） ============ -->
+  <div class="dsc-toast" id="toast"></div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/views-task.js"></script>
+  <script src="js/views-fill.js"></script>
+  <script src="js/views-review.js"></script>
+  <script src="js/views-summary.js"></script>
+  <script src="js/views-config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
