@@ -1,6 +1,14 @@
 /* ============================================================
    海外项目数据集指标填报 - Mock 数据层
    依据《DSC-需求规格说明书-海外项目数据集指标填报-V1.0》第五章数据集定义编制
+   ------------------------------------------------------------
+   V1.1 实装说明（依据 PRD v1.1 第 7.1 / 7.2 / 7.3 / 10 / 11 节裁定，逐项可回溯）：
+   ① W3 集采跟踪表补齐 7 项字段、W6 项目供应链风险全景表补齐 5 项字段（PRD 7.1 字段级结构）；
+   ② 一致性校验基准改为 W6「按二级单位真实汇总」（金额求和、率类按采购总额加权，规则 13/18），
+      并区分金额类（月报<周报阻断）与率类（偏差>±5% 仅提示核对，PRD 7.3）；
+   ③ D5 供货类型由周报 W4「供应类型」带出（裁定：供货类型取自周报），
+      故 D5 = 带出 13 项 + 另行补填 3 项（PRD 7.2 D5 行「15=12+3」需同步修订为 16=13+3）；
+   ④ D2 钢筋同口径用量改为需填报（PRD 7.2 D2 行 17 = 需填报 14 + 系统自动算 3）。
    ============================================================ */
 
 /* 视图注册表（由 views-*.js 填充；需先于视图文件加载） */
@@ -52,21 +60,21 @@ const UNITS = [
 const UNIT_MAP = {};
 UNITS.forEach(u => { UNIT_MAP[u.id] = u.name; });
 
-/* ---------- 数据集定义（D1~D6） ---------- */
+/* ---------- 数据集定义（D1~D6 月报，每月底填报；粒度：每单位每月） ---------- */
 const DATASET_ORDER = ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'];
 const DATASETS = {
-  D1: { code: 'D1', name: '采购管理指标',            mode: 'form', unit: '元',  fillFreq: '半年度',
-        desc: '物资设备采购、劳务与专业分包采购、采购汇总与资源结构，单位×期间每期一条' },
-  D2: { code: 'D2', name: '物资管理指标（混凝土/钢筋）', mode: 'form', unit: 'm³/t', fillFreq: '半年度',
-        desc: '混凝土、钢筋消耗与结余节超指标，单位×期间每期一条' },
-  D3: { code: 'D3', name: '物资损耗与资产管理指标',   mode: 'form', unit: 't/m³/m²/元', fillFreq: '半年度',
-        desc: '钢筋/混凝土/瓷砖损耗率与项目资产周转率，单位×期间每期一条' },
-  D4: { code: 'D4', name: '采购及物资管理人员',       mode: 'rows', unit: '人', fillFreq: '半年度',
-        desc: '逐人明细行填报，工作年限系统自动计算，支持批量导入 ≤10000 行' },
-  D5: { code: 'D5', name: '合格分供商',              mode: 'rows', unit: '家', fillFreq: '半年度',
-        desc: '合格分供商名录明细行，按"供应商名称+注册地"查重，汇总自动去重' },
-  D6: { code: 'D6', name: '不合格分供商',            mode: 'rows', unit: '家', fillFreq: '半年度',
-        desc: '不合格分供商名录明细行，禁用期限结构化，与合格库交叉校验' }
+  D1: { code: 'D1', name: '采购管理指标',            mode: 'form', unit: '元',  fillFreq: '月度',
+        desc: '物资设备采购、劳务与专业分包采购、采购汇总与资源结构，每单位每月一条；集采引用金额自动取自周报 W3' },
+  D2: { code: 'D2', name: '物资管理指标（混凝土/钢筋）', mode: 'form', unit: 'm³/t', fillFreq: '月度',
+        desc: '混凝土、钢筋消耗与结余节超指标，每单位每月一条；周报 W6 汇总损耗率作一致性校验基准' },
+  D3: { code: 'D3', name: '物资损耗与资产管理指标',   mode: 'form', unit: 't/m³/m²/元', fillFreq: '月度',
+        desc: '钢筋/混凝土/瓷砖损耗率与项目资产周转率，每单位每月一条；调出资产原值自动取自周报 W5' },
+  D4: { code: 'D4', name: '采购及物资管理人员',       mode: 'rows', unit: '人', fillFreq: '月度',
+        desc: '逐人明细行填报，姓名/所在单位/职务/是否专职自动取自周报 W2；工作年限系统自动计算' },
+  D5: { code: 'D5', name: '合格分供商',              mode: 'rows', unit: '家', fillFreq: '月度',
+        desc: '名录 12 项自动取自周报 W4，仅补填优势劣势/总部地址/共享中心；按"供应商名称+注册地"查重' },
+  D6: { code: 'D6', name: '不合格分供商',            mode: 'rows', unit: '家', fillFreq: '月度',
+        desc: '周报无对应内容，全部需填报；禁用期限结构化，与合格库交叉校验' }
 };
 
 /* ---------- 枚举字典（SRS V-E01~V-E03，可配置扩展） ---------- */
@@ -79,7 +87,10 @@ const ENUMS = {
   country:     ['中国', '阿联酋', '沙特阿拉伯', '卡塔尔', '埃及', '阿尔及利亚', '马来西亚', '印度尼西亚', '泰国', '越南', '柬埔寨', '斯里兰卡', '巴基斯坦', '孟加拉国', '肯尼亚', '埃塞俄比亚', '赞比亚', '刚果（金）', '俄罗斯', '乌兹别克斯坦'],
   sharedCenter: ['中东共享中心', '东南亚共享中心', '非洲共享中心', '国内共享中心'],
   gender:      ['男', '女'],
-  nationality: ['中国', '其他国家']
+  nationality: ['中国', '其他国家'],
+  /* V1.1 新增枚举（W4 分供方资源库） */
+  resourceOrigin: ['属地', '属地中国', '中国企业国外办厂', '国内产品出口企业'],
+  paymentTerm:    ['预付', '货到付款', '月结 30 天', '月结 60 天', '月结 90 天', '按节点结算']
 };
 
 /* 校验配置（Q4：勾稽偏差阈值，可配置） */
@@ -88,37 +99,86 @@ const VALIDATE_CONFIG = {
   importMaxRows: 10000
 };
 
-/* ---------- 报送任务 ---------- */
+/* ---------- 报送任务（V1.1 双频：周报每周五 / 月报每月底） ---------- */
 const TASKS = [
   {
-    id: 'T-2026H1', name: '2026年上半年海外供应链数据报送', status: '进行中',
-    year: 2026, period: '2026年上半年', deadline: '2026-09-25',
-    scope: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'], unitScope: '全部二级单位（14家）',
-    createdBy: '王建国', createdAt: '2026-08-26 10:12', publishTime: '2026-08-28 09:00',
-    desc: '请各单位于截止时间前完成六类数据集填报并提交审核，逾期将标记并计入报送情况统计。'
+    id: 'T-2026W38', name: '2026年9月第3周周报', status: '进行中', freq: '周报',
+    year: 2026, period: '2026年9月第3周', deadline: '2026-09-18',
+    scope: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'], unitScope: '各共享中心、区域总部、二级单位（项目）',
+    createdBy: '王建国', createdAt: '2026-09-12 09:00', publishTime: '2026-09-12 09:00',
+    desc: '每周五 17:00 前完成周报填报并提交：W1~W5 由各共享中心/区域总部填报，W6 项目供应链风险全景表由各二级单位（项目）填报。截止前 1 天系统自动催办未提交主体。'
   },
   {
-    id: 'T-2026Q3R', name: '2026年三季度人员专项摸底（临时）', status: '草稿',
-    year: 2026, period: '2026年三季度', deadline: '2026-10-20',
+    id: 'T-2026M09', name: '2026年9月海外供应链数据月报', status: '进行中', freq: '月报',
+    year: 2026, period: '2026年9月', deadline: '2026-09-30',
+    scope: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'], unitScope: '全部二级单位（14家）',
+    createdBy: '王建国', createdAt: '2026-08-26 10:12', publishTime: '2026-08-28 09:00',
+    desc: '月报数据进入时自动带出当月周报数据（置灰并标注来源期次），核对确认后补填周报未覆盖字段；每月底后 5 个工作日内齐套。'
+  },
+  {
+    id: 'T-2026M09RY', name: '2026年9月人员专项摸底（临时）', status: '草稿', freq: '月报',
+    year: 2026, period: '2026年9月（专项）', deadline: '2026-10-20',
     scope: ['D4'], unitScope: '海外业务相关单位（10家）',
     createdBy: '王建国', createdAt: '2026-09-09 15:40',
     desc: '应局人力资源部门要求，临时发起的人员专项摸底任务，尚未下发。'
   },
   {
-    id: 'T-2025H2', name: '2025年下半年海外供应链数据报送', status: '已截止',
-    year: 2025, period: '2025年下半年', deadline: '2026-01-15',
-    scope: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'], unitScope: '全部二级单位（14家）',
-    createdBy: '王建国', createdAt: '2025-12-20 09:30', publishTime: '2025-12-22 09:00',
-    desc: '该期东北公司、发展建设公司部分数据集逾期未报，已按规则标记。'
+    id: 'T-2026W37', name: '2026年9月第2周周报', status: '已关闭', freq: '周报',
+    year: 2026, period: '2026年9月第2周', deadline: '2026-09-11',
+    scope: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'], unitScope: '各共享中心、区域总部、二级单位（项目）',
+    createdBy: '王建国', createdAt: '2026-09-05 09:00', publishTime: '2026-09-05 09:00',
+    desc: '当周周报全部主体已提交并归档，作为 9 月月报取数来源之一（默认取当月最后一个已提交周报，Q6）。'
   },
   {
-    id: 'T-2025H1', name: '2025年上半年海外供应链数据报送', status: '已关闭',
-    year: 2025, period: '2025年上半年', deadline: '2025-07-15',
+    id: 'T-2026W36', name: '2026年9月第1周周报', status: '已关闭', freq: '周报',
+    year: 2026, period: '2026年9月第1周', deadline: '2026-09-04',
+    scope: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'], unitScope: '各共享中心、区域总部、二级单位（项目）',
+    createdBy: '王建国', createdAt: '2026-08-29 09:00', publishTime: '2026-08-29 09:00',
+    desc: '9 月首个周报期次，已归档；用于「周报周度明细报表区」月内周趋势对比。'
+  },
+  {
+    id: 'T-2025M12', name: '2025年12月海外供应链数据月报', status: '已截止', freq: '月报',
+    year: 2025, period: '2025年12月', deadline: '2026-01-15',
+    scope: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'], unitScope: '全部二级单位（14家）',
+    createdBy: '王建国', createdAt: '2025-12-20 09:30', publishTime: '2025-12-22 09:00',
+    desc: '该期东北公司、发展建设公司部分数据集逾期未报，已按规则标记并登记未报送原因。'
+  },
+  {
+    id: 'T-2025M06', name: '2025年6月海外供应链数据月报', status: '已关闭', freq: '月报',
+    year: 2025, period: '2025年6月', deadline: '2025-07-15',
     scope: ['D1', 'D2', 'D3', 'D4', 'D5', 'D6'], unitScope: '全部二级单位（14家）',
     createdBy: '王建国', createdAt: '2025-06-01 11:00', publishTime: '2025-06-05 09:00',
     desc: '全部单位已通过并完成汇总归档，任务关联填报单已只读。'
   }
 ];
+
+/* ---------- 周报填报主体：共享中心 / 区域总部（V1.1 第 7.1 节） ---------- */
+const SHARED_CENTERS = [
+  { id: 'SC1', name: '中东共享中心', countries: '阿联酋、沙特、卡塔尔等' },
+  { id: 'SC2', name: '东南亚共享中心', countries: '马来西亚、泰国、越南、柬埔寨等' },
+  { id: 'SC3', name: '非洲共享中心', countries: '埃及、埃塞俄比亚、肯尼亚等' },
+  { id: 'SC4', name: '国内共享中心', countries: '国内集采与出口业务' },
+  { id: 'RH1', name: '海外区域总部', countries: '区域统筹（仅报 W1 工作总结区）' }
+];
+const SC_MAP = {};
+SHARED_CENTERS.forEach(s => { SC_MAP[s.id] = s.name; });
+
+/* ---------- 周报数据集 W1~W6（每周五填报） ---------- */
+const W_DATASET_ORDER = ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'];
+const W_DATASETS = {
+  W1: { code: 'W1', name: '共享中心/区域总部汇总表', mode: 'form', subject: '各共享中心、区域总部',
+        desc: '在建项目与集采推进数值区 + 周工作总结区，主体×期间每周一条' },
+  W2: { code: 'W2', name: '人员配备表', mode: 'rows', subject: '各共享中心',
+        desc: '人员基础信息明细行，自动带出至月报 D4（同一指标全系统仅填报一次）' },
+  W3: { code: 'W3', name: '集采跟踪表', mode: 'rows', subject: '各共享中心',
+        desc: '集采品类跟踪明细行，集采金额按单位汇总后自动带出至月报 D1' },
+  W4: { code: 'W4', name: '分供方资源库', mode: 'rows', subject: '各共享中心',
+        desc: '分供方资源明细行，名录自动带出至月报 D5 合格分供商' },
+  W5: { code: 'W5', name: '调拨台账', mode: 'rows', subject: '各共享中心',
+        desc: '物资调拨明细行，调入价格按调入组织汇总后自动带出至月报 D3 调出资产原值' },
+  W6: { code: 'W6', name: '项目供应链风险全景表', mode: 'rows', subject: '各二级单位（项目）',
+        desc: '项目级风险全景明细行，率类按单位汇总后作为月报 D1/D2 一致性校验基准' }
+};
 
 /* ============================================================
    填报数据仓库（唯一真值：进度看板、审核、汇总均从此读取）
@@ -126,12 +186,12 @@ const TASKS = [
    状态机：未开始 → 填报中 → 已提交 →（已退回↔填报中）→ 已通过；逾期为并行标记
    ============================================================ */
 const FILL_STORE = {
-  'T-2026H1': {
-    /* ---- 海外公司（填报人视角主数据） ---- */
+  'T-2026M09': {
+    /* ---- 海外公司（填报人视角主数据，可交互演示：带出/覆盖/一致性校验） ---- */
     'U01': {
-      D1: { status: '已通过', zero: false, lastSubmit: '2026-09-05 16:40', passedBy: '李秀芳', passedTime: '2026-09-08 10:15' },
+      D1: { status: '填报中', zero: false },
       D2: { status: '填报中', zero: false },
-      D3: { status: '已提交', zero: false, lastSubmit: '2026-09-10 14:32' },
+      D3: { status: '填报中', zero: false },
       D4: { status: '已提交', zero: false, lastSubmit: '2026-09-10 14:35' },
       D5: { status: '填报中', zero: false },
       D6: { status: '填报中', zero: false }
@@ -232,14 +292,14 @@ const FILL_STORE = {
       D4: { status: '填报中', zero: false }, D5: { status: '填报中', zero: false }, D6: { status: '未开始', zero: false }
     }
   },
-  /* ---- T-2025H2：已截止任务，含已逾期状态演示 ---- */
-  'T-2025H2': {},
-  'T-2025H1': {}
+  /* ---- T-2025M12：已截止任务，含已逾期状态演示 ---- */
+  'T-2025M12': {},
+  'T-2025M06': {}
 };
 
-/* T-2025H2：11 家全部通过，3 家逾期未报 */
+/* T-2025M12：11 家全部通过，3 家逾期未报 */
 (function () {
-  const store = FILL_STORE['T-2025H2'];
+  const store = FILL_STORE['T-2025M12'];
   UNITS.forEach(u => {
     store[u.id] = {};
     const overdue = (u.id === 'U08' || u.id === 'U12' || u.id === 'U14');
@@ -252,9 +312,9 @@ const FILL_STORE = {
   });
 })();
 
-/* T-2025H1：全部通过（已关闭） */
+/* T-2025M06：全部通过（已关闭） */
 (function () {
-  const store = FILL_STORE['T-2025H1'];
+  const store = FILL_STORE['T-2025M06'];
   UNITS.forEach(u => {
     store[u.id] = {};
     DATASET_ORDER.forEach(d => {
@@ -299,7 +359,7 @@ const D1_SECTIONS = [
       { key: 'sum_reduce_rate', label: '综合采购成本降低率', type: 'calc', unit: '%', formula: '降低总额 ÷ 标准成本总金额合计' },
       { key: 'zg_amount', label: '中国资源引用金额',   type: 'number', unit: '元', required: true, tip: '当期采购中引用中国资源的金额' },
       { key: 'zg_rate',   label: '中国资源引入率',     type: 'calc',   unit: '%', formula: '中国资源引用金额 ÷ 采购总金额' },
-      { key: 'jc_amount', label: '物资设备集采引用金额', type: 'number', unit: '元', required: true, tip: '纳入局/公司集采的物资设备金额' },
+      { key: 'jc_amount', label: '物资设备集采引用金额', type: 'fetched', unit: '元', from: 'W3', tip: '纳入局/公司集采的物资设备金额；自动取自周报 W3 集采跟踪表按单位汇总（允许覆盖留痕）' },
       { key: 'jc_rate',   label: '物资设备集采率',     type: 'calc',   unit: '%', formula: '集采引用金额 ÷ 物资设备采购总金额' },
       { key: 'dc_amount', label: '厂家/一级代理直采金额', type: 'number', unit: '元', required: true, tip: '向厂家或一级代理直采的物资设备金额' },
       { key: 'dc_rate',   label: '直采率',             type: 'calc',   unit: '%', formula: '直采金额 ÷ 物资设备采购总金额' }
@@ -346,7 +406,8 @@ const D2_SECTIONS = [
       { key: 'gj_syL', label: '实际用量',   type: 'number', unit: 't', required: true, tip: '实际消耗总量' },
       { key: 'gj_csL', label: '措施用量',   type: 'number', unit: 't', required: true, tip: '措施项目钢筋消耗量' },
       { key: 'gj_ljL', label: '临建用量',   type: 'number', unit: 't', required: true, tip: '临建设施钢筋消耗量' },
-      { key: 'gj_tkL', label: '同口径用量', type: 'calc',   unit: 't',  formula: '实际用量 − 措施用量 − 临建用量' },
+      /* 裁定④（PRD 7.2 D2 行 17 = 需填报 14 + 系统自动算 3）：同口径用量为需填报字段，系统按口径核对 */
+      { key: 'gj_tkL', label: '同口径用量', type: 'number', unit: 't', required: true, tip: '与图纸口径一致的实际消耗量（口径参考：实际用量 − 措施用量 − 临建用量）' },
       { key: 'gj_tuL', label: '图纸量',     type: 'number', unit: 't', required: true, tip: '钢筋图纸净用量' },
       { key: 'gj_jcl', label: '节超量',     type: 'calc',   unit: 't',  formula: '图纸量 − 同口径用量' },
       { key: 'gj_jclv', label: '节超率',   type: 'calc',   unit: '%',  formula: '节超量 ÷ 图纸量' }
@@ -354,7 +415,8 @@ const D2_SECTIONS = [
   }
 ];
 
-/* D2 填报值：[混凝土5项] + [钢筋8项(不含计算)] */
+/* D2 填报值：[混凝土5项] + [钢筋8项(不含计算与同口径用量)]；钢筋「同口径用量」按裁定④为需填报字段，
+   Mock 按口径参考值预置（见下方注入逻辑），系统仅按 V-G04 口径核对提示 */
 const D2_TUPLES = {
   U01: [128600, 3200, 8600, 115400, 113800, 42600, 1850, 2600, 4900, 39800, 3200, 1850, 35200],
   U02: [186400, 4800, 12600, 167200, 164800, 62500, 2600, 3500, 7800, 58200, 4600, 2700, 51600],
@@ -396,7 +458,7 @@ const D3_SECTIONS = [
   {
     key: 'zc', title: '项目资产管理（元）', fields: [
       { key: 'zc_yz', label: '项目资产原值金额', type: 'number', unit: '元', required: true, tip: '项目在管资产原值合计' },
-      { key: 'zc_dc', label: '调出资产原值金额', type: 'number', unit: '元', required: true, tip: '当期调出资产原值合计' },
+      { key: 'zc_dc', label: '调出资产原值金额', type: 'fetched', unit: '元', from: 'W5', tip: '当期调出资产原值合计；自动取自周报 W5 调拨台账按调入组织汇总（允许覆盖留痕）' },
       { key: 'zc_zzl', label: '项目资产周转率',   type: 'calc',   unit: '%',  formula: '调出资产原值 ÷ 项目资产原值' }
     ]
   }
@@ -424,9 +486,9 @@ const D3_ZERO_TILE_UNITS = ['U03', 'U05', 'U07', 'U09', 'U10', 'U14'];
    ============================================================ */
 const D4_COLUMNS = [
   { key: 'seq',       label: '序号',           width: '48px' },
-  { key: 'dept',      label: '三级单位',        edit: true },
+  { key: 'dept',      label: '三级单位',        edit: true, fetched: 'W2', tip: '自动取自周报 W2 人员配备表·所在单位' },
   { key: 'project',   label: '所在部门/项目名称', edit: true },
-  { key: 'name',      label: '姓名',           edit: true },
+  { key: 'name',      label: '姓名',           edit: true, fetched: 'W2', tip: '自动取自周报 W2 人员配备表' },
   { key: 'empNo',     label: '员工编号',        edit: true, tip: 'A/Y/B/WG 开头；无编号填"/"' },
   { key: 'nationality', label: '国籍',         edit: true, enum: 'nationality' },
   { key: 'gender',    label: '性别',           edit: true, enum: 'gender' },
@@ -439,13 +501,13 @@ const D4_COLUMNS = [
   { key: 'joinYears', label: '本公司工作年限',   calc: true },
   { key: 'dutyStart', label: '从事采购/物资本职起始时间', edit: true, tip: 'yyyy/MM/dd' },
   { key: 'dutyYears', label: '本职工作年限',     calc: true },
-  { key: 'position',  label: '现任职务',        edit: true },
+  { key: 'position',  label: '现任职务',        edit: true, fetched: 'W2', tip: '自动取自周报 W2 人员配备表·职务' },
   { key: 'title',     label: '专业技术职称',    edit: true },
   { key: 'cert1',     label: '一级注册造价师',  check: true },
   { key: 'cert2',     label: '一级建造师',      check: true },
   { key: 'certOther', label: '持证-其它',       edit: true },
   { key: 'post',      label: '从事岗位',        edit: true, enum: 'post' },
-  { key: 'fullTime',  label: '专职/兼职',       edit: true, enum: ['专职', '兼职'] },
+  { key: 'fullTime',  label: '专职/兼职',       edit: true, enum: ['专职', '兼职'], fetched: 'W2', tip: '自动取自周报 W2 人员配备表·是否专职' },
   { key: 'mainJob',   label: '主职岗位',        edit: true, tip: '兼职时必填' },
   { key: 'phone',     label: '联系电话',        edit: true },
   { key: 'history',   label: '八局系统内工作履历', edit: true }
@@ -474,30 +536,34 @@ const D4_ROWS_U06 = [
   { id: 'R2', dept: '海外分公司', project: '金边商业广场项目', name: '吴敏', empNo: 'Y20210912', nationality: '中国', gender: '女', age: 29, education: '硕士', major: '供应链管理', workStart: '2020/07/01', joinStart: '2021/07/01', dutyStart: '2020/07/01', position: '采购工程师', title: '/', cert1: false, cert2: false, certOther: '/', post: '采购管理', fullTime: '专职', phone: '13099990000', history: '' }
 ];
 
-FILL_STORE['T-2026H1']['U01'].D4.rows = JSON.parse(JSON.stringify(D4_ROWS_U01));
-FILL_STORE['T-2026H1']['U02'].D4.rows = JSON.parse(JSON.stringify(D4_ROWS_U02));
-FILL_STORE['T-2026H1']['U06'].D4.rows = JSON.parse(JSON.stringify(D4_ROWS_U06));
+FILL_STORE['T-2026M09']['U01'].D4.rows = JSON.parse(JSON.stringify(D4_ROWS_U01));
+FILL_STORE['T-2026M09']['U02'].D4.rows = JSON.parse(JSON.stringify(D4_ROWS_U02));
+FILL_STORE['T-2026M09']['U06'].D4.rows = JSON.parse(JSON.stringify(D4_ROWS_U06));
 
 /* ============================================================
    D5 合格分供商 - 明细行数据（SRS 5.5）
    ============================================================ */
 const D5_COLUMNS = [
   { key: 'seq',      label: '序号',       width: '48px' },
-  { key: 'type',     label: '供货类型',   edit: true, enum: 'supplyType' },
-  { key: 'name',     label: '供应商名称', edit: true, tip: '企业全称，与 DSC 供应商主数据自动匹配关联编码' },
-  { key: 'region',   label: '注册地',     edit: true, tip: '注册地址或所在国别' },
-  { key: 'contact',  label: '联系人',     edit: true },
-  { key: 'phone',    label: '联系电话',   edit: true, tip: '支持国际号码格式' },
-  { key: 'email',    label: '电子邮箱',   edit: true },
-  { key: 'inTime',   label: '入库时间',   edit: true, tip: 'yyyy/MM/dd' },
-  { key: 'inspector', label: '考察人',    edit: true, tip: '多人用顿号分隔' },
-  { key: 'biz',      label: '业务往来',   edit: true, tip: '如钢筋供应、泵车租赁、主体劳务等' },
-  { key: 'category', label: '品类',       edit: true, enum: 'category' },
-  { key: 'advDesc',  label: '优势与劣势描述', edit: true },
-  { key: 'rating',   label: '供应商评级', edit: true, enum: 'rating' },
-  { key: 'countries', label: '可供应国别', edit: true, enum: 'country', multi: true },
-  { key: 'hq',       label: '总部地址',   edit: true, tip: '无则填"/"' },
-  { key: 'center',   label: '所属共享中心', edit: true, enum: 'sharedCenter' }
+  /* 裁定③：供货类型取自周报（W4 分供方资源库·供应类型），不再手工填报 */
+  { key: 'type',     label: '供货类型',   edit: true, enum: 'supplyType', fetched: 'W4', tip: '自动取自周报 W4 分供方资源库·供应类型（无手工录入入口，修改需覆盖留痕）' },
+  /* —— 以下 12 项（连同上方「供货类型」共 13 项）自动取自周报 W4（无手工录入入口，A14；修改需覆盖留痕） —— */
+  { key: 'name',     label: '供应商名称', edit: true, fetched: 'W4', tip: '自动取自周报 W4 分供方资源库' },
+  { key: 'region',   label: '注册地',     edit: true, fetched: 'W4' },
+  { key: 'contact',  label: '联系人',     edit: true, fetched: 'W4' },
+  { key: 'phone',    label: '联系电话',   edit: true, fetched: 'W4', tip: '自动取自 W4，支持国际号码格式' },
+  { key: 'email',    label: '电子邮箱',   edit: true, fetched: 'W4' },
+  { key: 'inTime',   label: '入库时间',   edit: true, fetched: 'W4' },
+  { key: 'inspector', label: '考察人',    edit: true, fetched: 'W4' },
+  { key: 'biz',      label: '业务往来',   edit: true, fetched: 'W4' },
+  { key: 'category', label: '品类',       edit: true, enum: 'category', fetched: 'W4' },
+  { key: 'rating',   label: '供应商评级', edit: true, enum: 'rating', fetched: 'W4' },
+  { key: 'countries', label: '可供应国别', edit: true, enum: 'country', multi: true, fetched: 'W4' },
+  { key: 'paymentTerm', label: '账期',    edit: true, enum: 'paymentTerm', fetched: 'W4' },
+  /* —— 以下 3 项为月报另行补填（周报未覆盖） —— */
+  { key: 'advDesc',  label: '优势与劣势描述', edit: true, manual: true },
+  { key: 'hq',       label: '总部地址',   edit: true, manual: true, tip: '无则填"/"' },
+  { key: 'center',   label: '所属共享中心', edit: true, enum: 'sharedCenter', manual: true }
 ];
 
 /* 海外公司 D5 行（含预置查重问题行 R9：与 R1 同名同注册地 → V-C03 阻断） */
@@ -535,11 +601,11 @@ const D5_ROWS_U07 = [
   { id: 'R1', type: '物资', name: '开罗尼罗河石材有限公司', region: '埃及·开罗', contact: 'Hassan', phone: '+20-2-3371-4200', email: 'hassan@nile-stone.eg', inTime: '2025/05/08', inspector: '刘成', biz: '石材供应', category: '瓷砖及装饰材料', advDesc: '跨单位共用', rating: 'B级-建议使用', countries: ['埃及'], hq: '/', center: '非洲共享中心' }
 ];
 
-FILL_STORE['T-2026H1']['U01'].D5.rows = JSON.parse(JSON.stringify(D5_ROWS_U01));
-FILL_STORE['T-2026H1']['U02'].D5.rows = JSON.parse(JSON.stringify(D5_ROWS_U02));
-FILL_STORE['T-2026H1']['U06'].D5.rows = JSON.parse(JSON.stringify(D5_ROWS_U06));
-FILL_STORE['T-2026H1']['U07'].D5.rows = JSON.parse(JSON.stringify(D5_ROWS_U07));
-FILL_STORE['T-2026H1']['U09'].D5.rows = JSON.parse(JSON.stringify(D5_ROWS_U09));
+FILL_STORE['T-2026M09']['U01'].D5.rows = JSON.parse(JSON.stringify(D5_ROWS_U01));
+FILL_STORE['T-2026M09']['U02'].D5.rows = JSON.parse(JSON.stringify(D5_ROWS_U02));
+FILL_STORE['T-2026M09']['U06'].D5.rows = JSON.parse(JSON.stringify(D5_ROWS_U06));
+FILL_STORE['T-2026M09']['U07'].D5.rows = JSON.parse(JSON.stringify(D5_ROWS_U07));
+FILL_STORE['T-2026M09']['U09'].D5.rows = JSON.parse(JSON.stringify(D5_ROWS_U09));
 
 /* ============================================================
    D6 不合格分供商 - 明细行数据（SRS 5.6）
@@ -570,7 +636,388 @@ const D6_ROWS_U01 = [
   { id: 'R3', type: '物资', name: '开罗尼罗河石材有限公司', region: '埃及·开罗', contact: 'Hassan / +20-2-3371-4200', email: 'hassan@nile-stone.eg', inTime: '2025/05/08', biz: '瓷砖、大理石供应', category: '瓷砖及装饰材料', badDesc: '配合度低：供货延迟且拒不开具履约保函', banStart: '2026/01/10', banMonths: 6, hq: '/', note: '与合格库记录冲突，提交前需处理' }
 ];
 
-FILL_STORE['T-2026H1']['U01'].D6.rows = JSON.parse(JSON.stringify(D6_ROWS_U01));
+FILL_STORE['T-2026M09']['U01'].D6.rows = JSON.parse(JSON.stringify(D6_ROWS_U01));
+
+/* ============================================================
+   周报数据集 W1~W6（V1.1 第 7.1 节）— 每周五填报
+   ============================================================ */
+
+/* W1 共享中心/区域总部汇总表：数值区 + 工作总结区（单记录表单） */
+const W1_SECTIONS = [
+  {
+    key: 'num', title: '数值区', fields: [
+      { key: 'projCount', label: '在建项目数量', type: 'number', unit: '个', required: true, tip: '本共享中心/区域总部在建海外项目数量' },
+      { key: 'catPlanCount', label: '年度集采品类个数', type: 'number', unit: '个', required: true, tip: '年度集采计划品类总数' },
+      { key: 'catStarted', label: '已发起集采品类个数', type: 'number', unit: '个', required: true },
+      { key: 'catDone', label: '已完成集采品类个数', type: 'number', unit: '个', required: true },
+      { key: 'doneCoverProj', label: '已完成品类覆盖项目数', type: 'number', unit: '个', required: true },
+      { key: 'saveAmount', label: '采购成本降低额', type: 'number', unit: '元', required: true, tip: '当期集采累计降低额（分子）' },
+      { key: 'jcAmountSum', label: '集采金额合计', type: 'fetched', unit: '元', from: 'W3', tip: '按 W3 集采跟踪表本主体金额汇总（自动带出，允许覆盖留痕）' },
+      { key: 'saveRate', label: '采购成本降低率', type: 'calc', unit: '%', formula: '采购成本降低额 ÷ 集采金额合计' }
+    ]
+  },
+  {
+    key: 'text', title: '工作总结区', fields: [
+      { key: 'weekSummary', label: '周工作总结', type: 'text', long: true, required: true, tip: '本周集采推进、资源拓展、存在问题的简要总结' },
+      { key: 'keyProject', label: '重点项目采购与长周期设备情况', type: 'text', long: true, tip: '长周期设备招采进展与风险提示' }
+    ]
+  }
+];
+
+/* W2 人员配备表（→ 月报 D4 基础信息） */
+const W2_COLUMNS = [
+  { key: 'seq', label: '序号', width: '48px' },
+  { key: 'name', label: '姓名', edit: true },
+  { key: 'unitName', label: '所在单位', edit: true },
+  { key: 'position', label: '职务', edit: true },
+  { key: 'center', label: '所属共享中心', edit: true, enum: 'sharedCenter' },
+  { key: 'fullTime', label: '是否专职', edit: true, enum: ['专职', '兼职'] }
+];
+const W2_ROWS_SC1 = [
+  { id: 'W2-1', name: '刘志强', unitName: '中东共享中心', position: '集采专员', center: '中东共享中心', fullTime: '专职' },
+  { id: 'W2-2', name: '马晓东', unitName: '中东共享中心', position: '采购主管', center: '中东共享中心', fullTime: '专职' },
+  { id: 'W2-3', name: 'Hassan Ali', unitName: '中东共享中心', position: '属地采购协调员', center: '中东共享中心', fullTime: '专职' }
+];
+const W2_ROWS_SC2 = [
+  { id: 'W2-1', name: '林伟', unitName: '东南亚共享中心', position: '集采负责人', center: '东南亚共享中心', fullTime: '专职' },
+  { id: 'W2-2', name: '陈美玲', unitName: '东南亚共享中心', position: '物资专员', center: '东南亚共享中心', fullTime: '兼职' }
+];
+
+/* W3 集采跟踪表（→ 月报 D1 集采引用金额分子） */
+const W3_COLUMNS = [
+  { key: 'seq', label: '序号', width: '48px' },
+  { key: 'category', label: '集采品类', edit: true, tip: '如钢筋、混凝土、电缆等' },
+  { key: 'level', label: '集采层级', edit: true, enum: ['局级集采', '公司级集采', '区域集采'] },
+  { key: 'leadUnit', label: '牵头单位', edit: true },
+  { key: 'owner', label: '负责人', edit: true },
+  { key: 'inPlan', label: '是否年初计划内', edit: true, enum: ['是', '否'] },
+  { key: 'unit', label: '单位', edit: true, tip: '集采需求归口单位' },
+  { key: 'volume', label: '预计体量', edit: true },
+  { key: 'coverProj', label: '覆盖项目', edit: true },
+  { key: 'amount', label: '金额（元）', edit: true, tip: '自动带出至月报 D1 集采引用金额' },
+  { key: 'saveAmount', label: '预计集采降本额（元）', edit: true },
+  { key: 'bidStartTime', label: '招采发起时间', edit: true, tip: 'yyyy/MM/dd（PRD 7.1 W3 字段级结构补齐）' },
+  { key: 'bidEndTime', label: '预计完成时间', edit: true, tip: 'yyyy/MM/dd' },
+  { key: 'stage', label: '当前阶段', edit: true, enum: ['需求汇总', '招标文件编制', '发标', '评标', '定标', '合同签订', '执行中'] },
+  { key: 'progress', label: '本周进展', edit: true },
+  { key: 'nextPlan', label: '下周计划', edit: true, tip: '下周拟推进事项' },
+  { key: 'purchaseNo', label: '采购编号', edit: true, tip: '招采/采购编号，尚未生成填"/"' },
+  { key: 'highlight', label: '亮点', edit: true, tip: '可复用于 W1 周工作总结' },
+  { key: 'overdue', label: '是否超期（>50天）', edit: true, enum: ['否', '是'] },
+  { key: 'firstResource', label: '是否首次资源配置', edit: true, enum: ['是', '否'], tip: '首次资源配置须在备注说明资源类型' },
+  { key: 'note', label: '备注', edit: true }
+];
+const W3_ROWS_SC1 = [
+  { id: 'W3-1', category: '钢筋', level: '局级集采', leadUnit: '局采购管理部', owner: '王建国', inPlan: '是', unit: '中东共享中心', volume: '12 万吨', coverProj: '迪拜绿地中心等 5 个项目', amount: 86000000, saveAmount: 5200000, bidStartTime: '2026/08/05', bidEndTime: '2026/10/20', stage: '评标', progress: '完成 3 家入围单位考察，本周开标', nextPlan: '完成定标评审并上报定标报告', purchaseNo: 'JC-2026-DB-001', highlight: '3 家入围单位均通过工厂考察，报价较概算低 6%', overdue: '否', firstResource: '是', note: '长协锁价一个季度，首次资源配置为属地钢材加工' },
+  { id: 'W3-2', category: '商品混凝土', level: '区域集采', leadUnit: '中东共享中心', owner: '刘志强', inPlan: '是', unit: '中东共享中心', volume: '48 万 m³', coverProj: '利雅得地铁等 4 个项目', amount: 42000000, saveAmount: 2100000, bidStartTime: '2026/07/20', bidEndTime: '2026/09/30', stage: '合同签订', progress: '主合同条款谈判完成', nextPlan: '主合同用印并启用首批供货', purchaseNo: 'JC-2026-DB-002', highlight: '区域集采单价同比下降 4.8%', overdue: '否', firstResource: '否', note: '' },
+  { id: 'W3-3', category: '电缆', level: '公司级集采', leadUnit: '局采购管理部', owner: '马晓东', inPlan: '否', unit: '中东共享中心', volume: '360 km', coverProj: '开罗新行政首都项目', amount: 28500000, saveAmount: 1650000, bidStartTime: '2026/09/01', bidEndTime: '2026/11/15', stage: '发标', progress: '标书已发出，等待回标', nextPlan: '组织回标与评标', purchaseNo: '/', highlight: '国产替代方案通过技术评审', overdue: '是', firstResource: '是', note: '发标超期 50 天以上，需专项推进' }
+];
+const W3_ROWS_SC2 = [
+  { id: 'W3-1', category: '木方模板', level: '区域集采', leadUnit: '东南亚共享中心', owner: '林伟', inPlan: '是', unit: '东南亚共享中心', volume: '9.6 万 m³', coverProj: '吉隆坡 CBD 等 3 个项目', amount: 23800000, saveAmount: 1450000, bidStartTime: '2026/06/15', bidEndTime: '2026/09/25', stage: '执行中', progress: '首批到货验收完成', nextPlan: '跟踪第二批到货与验收', purchaseNo: 'JC-2026-SEA-001', highlight: '木方周转 3 次以上，损耗率低于 2%', overdue: '否', firstResource: '否', note: '' },
+  { id: 'W3-2', category: '周转材料租赁', level: '公司级集采', leadUnit: '东南亚共享中心', owner: '陈美玲', inPlan: '是', unit: '东南亚共享中心', volume: '—', coverProj: '曼谷智慧产业园项目', amount: 12600000, saveAmount: 830000, bidStartTime: '2026/07/01', bidEndTime: '2026/10/10', stage: '定标', progress: '定标报告审批中', nextPlan: '定标结果公示并签订租赁框架协议', purchaseNo: 'JC-2026-SEA-002', highlight: '租赁单价较上年度下降 9%', overdue: '否', firstResource: '否', note: '' }
+];
+
+/* W4 分供方资源库（→ 月报 D5 合格分供商 12 项带出） */
+const W4_COLUMNS = [
+  { key: 'seq', label: '序号', width: '48px' },
+  { key: 'supplyType', label: '供应类型', edit: true, enum: 'supplyType' },
+  { key: 'name', label: '分供方名称', edit: true },
+  { key: 'region', label: '注册地', edit: true },
+  { key: 'contact', label: '联系人', edit: true },
+  { key: 'phone', label: '电话', edit: true },
+  { key: 'email', label: '邮箱', edit: true },
+  { key: 'inTime', label: '入库时间', edit: true, tip: 'yyyy/MM/dd' },
+  { key: 'inspector', label: '考察人', edit: true },
+  { key: 'biz', label: '业务往来', edit: true },
+  { key: 'category', label: '分供品类', edit: true, enum: 'category' },
+  { key: 'mainContent', label: '供应主要内容', edit: true },
+  { key: 'advDesc', label: '优势与劣势', edit: true },
+  { key: 'rating', label: '评级', edit: true, enum: 'rating' },
+  { key: 'countries', label: '可供应国别区域', edit: true, enum: 'country', multi: true },
+  { key: 'resourceOrigin', label: '资源所属国别', edit: true, enum: 'resourceOrigin' },
+  { key: 'paymentTerm', label: '账期', edit: true, enum: 'paymentTerm' },
+  { key: 'reporter', label: '填报人', edit: true }
+];
+const W4_ROWS_SC1 = [
+  { id: 'W4-1', supplyType: '物资', name: '中东建材贸易有限责任公司', region: '阿联酋·迪拜', contact: '王立新', phone: '+971-4-885-2121', email: 'sales@me-bm.ae', inTime: '2025/03/15', inspector: '刘志强', biz: '钢筋供应、水泥供应', category: '钢筋及钢材', mainContent: '螺纹钢、盘螺、水泥', advDesc: '供货稳定、账期灵活；高峰期运力紧张', rating: 'A级-推荐使用', countries: ['阿联酋', '沙特阿拉伯', '卡塔尔'], resourceOrigin: '国内产品出口企业', paymentTerm: '月结 60 天', reporter: '刘志强' },
+  { id: 'W4-2', supplyType: '租赁', name: '迪拜环球设备租赁公司', region: '阿联酋·迪拜', contact: 'Omar', phone: '+971-50-662-1100', email: 'rent@dubai-eq.ae', inTime: '2024/11/02', inspector: '马晓东', biz: '塔吊、泵车租赁', category: '机械设备', mainContent: '塔吊 12 台、泵车 6 台', advDesc: '设备保有量大、响应快', rating: 'B级-建议使用', countries: ['阿联酋'], resourceOrigin: '属地', paymentTerm: '按节点结算', reporter: '马晓东' },
+  { id: 'W4-3', supplyType: '物资', name: '沙特华新水泥制品厂', region: '沙特阿拉伯·利雅得', contact: 'Saleh', phone: '+966-11-461-5500', email: 'info@huaxin-sa.com', inTime: '2025/01/20', inspector: '刘志强', biz: '商品混凝土供应', category: '混凝土', mainContent: 'C30~C60 商品混凝土', advDesc: '利雅得周边 3 个搅拌站，夜间供应能力强', rating: 'A级-推荐使用', countries: ['沙特阿拉伯'], resourceOrigin: '中国企业国外办厂', paymentTerm: '月结 30 天', reporter: '刘志强' },
+  { id: 'W4-4', supplyType: '劳务分包', name: '中埃建设劳务合作公司', region: '埃及·开罗', contact: '马建国', phone: '+20-2-2521-7800', email: 'mc@cn-eg.com', inTime: '2024/08/12', inspector: 'Hassan Ali', biz: '主体劳务、砌筑劳务', category: '劳务', mainContent: '主体结构劳务 800 人', advDesc: '属地工人 800 余人，工种齐全', rating: 'A级-推荐使用', countries: ['埃及', '阿尔及利亚'], resourceOrigin: '属地中国', paymentTerm: '月结 30 天', reporter: 'Hassan Ali' }
+];
+const W4_ROWS_SC2 = [
+  { id: 'W4-1', supplyType: '物资', name: '曼谷金桥木业有限公司', region: '泰国·曼谷', contact: 'Somchai', phone: '+66-2-329-1800', email: 'sale@goldbridge-th.co', inTime: '2025/02/14', inspector: '林伟', biz: '木方、模板供应', category: '木方模板', mainContent: '木方、覆膜模板', advDesc: '价格低；含水率控制一般', rating: 'B级-建议使用', countries: ['泰国', '柬埔寨'], resourceOrigin: '属地', paymentTerm: '货到付款', reporter: '林伟' },
+  { id: 'W4-2', supplyType: '服务', name: '吉隆坡快捷物流公司', region: '马来西亚·吉隆坡', contact: 'Lim Wei', phone: '+60-3-2181-4400', email: 'cs@kl-express.my', inTime: '2025/06/30', inspector: '陈美玲', biz: '物流清关、仓储配送', category: '物流清关', mainContent: '清关、仓储、内陆运输', advDesc: '清关时效快；单票费用高', rating: 'C级-审慎使用', countries: ['马来西亚', '泰国'], resourceOrigin: '属地', paymentTerm: '月结 30 天', reporter: '陈美玲' }
+];
+
+/* W5 调拨台账（→ 月报 D3 调出资产原值金额） */
+const W5_COLUMNS = [
+  { key: 'seq', label: '序号', width: '48px' },
+  { key: 'outProject', label: '调出项目', edit: true },
+  { key: 'outCountry', label: '调出国家', edit: true },
+  { key: 'outOrg', label: '调出组织', edit: true },
+  { key: 'inProject', label: '调入项目', edit: true },
+  { key: 'inCountry', label: '调入国家', edit: true },
+  { key: 'inOrg', label: '调入组织', edit: true, tip: '按调入组织汇总 → 月报 D3 调出资产原值' },
+  { key: 'material', label: '材料名称', edit: true },
+  { key: 'spec', label: '规格型号', edit: true },
+  { key: 'newPrice', label: '若新购采购金额（元）', edit: true },
+  { key: 'inPrice', label: '调入价格（元）', edit: true },
+  { key: 'transferTime', label: '调拨时间', edit: true, tip: 'yyyy/MM/dd' },
+  { key: 'note', label: '备注', edit: true }
+];
+const W5_ROWS_SC1 = [
+  { id: 'W5-1', outProject: '迪拜港口物流园项目', outCountry: '阿联酋', outOrg: '中建八局海外公司', inProject: '利雅得地铁项目部', inCountry: '沙特阿拉伯', inOrg: '中建八局海外公司', material: '塔式起重机', spec: 'QTZ80', newPrice: 3860000, inPrice: 2900000, transferTime: '2026/09/16', note: '设备完好，附检测报告' },
+  { id: 'W5-2', outProject: '多哈展馆项目部', outCountry: '卡塔尔', outOrg: '中建八局一公司', inProject: '迪拜绿地中心项目部', inCountry: '阿联酋', inOrg: '中建八局一公司', material: '施工电梯', spec: 'SC200/200', newPrice: 2680000, inPrice: 2420000, transferTime: '2026/09/17', note: '' }
+];
+const W5_ROWS_SC2 = [
+  { id: 'W5-1', outProject: '曼谷智慧产业园项目', outCountry: '泰国', outOrg: '中建八局三公司', inProject: '胡志明市电厂项目', inCountry: '越南', inOrg: '中建八局华南公司', material: '发电机', spec: '500kW', newPrice: 1520000, inPrice: 1180000, transferTime: '2026/09/15', note: '' }
+];
+
+/* W6 项目供应链风险全景表（率类按单位汇总 → 月报 D1/D2 一致性校验基准） */
+const W6_COLUMNS = [
+  { key: 'seq', label: '序号', width: '48px' },
+  { key: 'project', label: '项目名称', edit: true },
+  { key: 'country', label: '项目国别', edit: true },
+  { key: 'address', label: '项目地址', edit: true },
+  { key: 'contractAmount', label: '合同额（元）', edit: true },
+  { key: 'output', label: '自施产值（元）', edit: true },
+  { key: 'purchaseTotal', label: '采购总额（元）', edit: true, tip: '月报 D1 采购金额类一致性校验基准' },
+  { key: 'materialPurchase', label: '其中：物资设备采购（元）', edit: true, tip: '采购总额中的物资设备分项（PRD 7.1 W6 字段级结构补齐）' },
+  { key: 'laborPurchase', label: '其中：劳务分包采购（元）', edit: true },
+  { key: 'reduceRate', label: '综合采购成本降低率', calc: true, formula: '系统计算；按单位汇总后作月报校验基准' },
+  { key: 'benefitRate', label: '综合采购效益率', calc: true, formula: '系统计算；按单位汇总后作月报校验基准' },
+  { key: 'gjLossRate', label: '钢筋损耗率', calc: true, formula: '系统计算；作月报 D2 校验基准' },
+  { key: 'hntLossRate', label: '混凝土损耗率', calc: true, formula: '系统计算；作月报 D2 校验基准' },
+  { key: 'localSupplierRate', label: '属地分供商占比', edit: true },
+  { key: 'localPurchaseRate', label: '属地采购占比', edit: true },
+  { key: 'centralRate', label: '集中采购率', edit: true },
+  { key: 'hasRisk', label: '是否有风险', edit: true, enum: ['否', '是'] },
+  { key: 'riskType', label: '风险类型', edit: true, tip: '如供应中断、价格波动、合规风险' },
+  { key: 'riskLevel', label: '风险等级', edit: true, enum: ['低', '中', '高'] },
+  { key: 'riskDesc', label: '风险描述', edit: true, tip: '风险具体表现与影响（有风险时必填）' },
+  { key: 'estLoss', label: '预计损失（元）', edit: true, tip: '无风险填"/"' },
+  { key: 'strategy', label: '应对策略', edit: true },
+  { key: 'resolveTime', label: '化解时间', edit: true, tip: 'yyyy/MM/dd' },
+  { key: 'owner', label: '责任部门/责任人', edit: true }
+];
+const W6_ROWS_U01 = [
+  { id: 'W6-1', project: '迪拜绿地中心项目', country: '阿联酋', address: '阿联酋迪拜杰贝阿里自贸区', contractAmount: 1860000000, output: 1240000000, purchaseTotal: 186000000, materialPurchase: 54000000, laborPurchase: 132000000, reduceRate: '2.90%', benefitRate: '11.80%', gjLossRate: '2.70%', hntLossRate: '1.60%', localSupplierRate: '62.00%', localPurchaseRate: '48.00%', centralRate: '41.00%', hasRisk: '是', riskType: '价格波动', riskLevel: '中', riskDesc: '钢筋价格季度波动超 8%，属地供应半径受限', estLoss: 3200000, strategy: '锁定季度长协价，增加备选供应商', resolveTime: '2026/12/31', owner: '项目物资部 / 李强' },
+  { id: 'W6-2', project: '内罗毕商务中心项目', country: '肯尼亚', address: '肯尼亚内罗毕西部商业区', contractAmount: 620000000, output: 380000000, purchaseTotal: 119000000, materialPurchase: 48000000, laborPurchase: 71000000, reduceRate: '1.10%', benefitRate: '9.60%', gjLossRate: '2.90%', hntLossRate: '1.80%', localSupplierRate: '71.00%', localPurchaseRate: '59.00%', centralRate: '33.00%', hasRisk: '否', riskType: '', riskLevel: '低', riskDesc: '', estLoss: '/', strategy: '', resolveTime: '/', owner: '项目物资部 / Michael Otieno' }
+];
+const W6_ROWS_U02 = [
+  { id: 'W6-1', project: '多哈展馆项目', country: '卡塔尔', address: '卡塔尔多哈西湾中央商务区', contractAmount: 980000000, output: 660000000, purchaseTotal: 448600000, materialPurchase: 149900000, laborPurchase: 298700000, reduceRate: '3.60%', benefitRate: '14.30%', gjLossRate: '2.50%', hntLossRate: '1.40%', localSupplierRate: '55.00%', localPurchaseRate: '42.00%', centralRate: '46.00%', hasRisk: '否', riskType: '', riskLevel: '低', riskDesc: '', estLoss: '/', strategy: '', resolveTime: '/', owner: '项目物资部 / 赵鹏' }
+];
+
+/* ---------- 周报填报数据仓库 WEEKLY_STORE[任务][主体][数据集] ---------- */
+const WEEKLY_STORE = {
+  'T-2026W38': {
+    SC1: {
+      W1: { status: '已提交', zero: false, lastSubmit: '2026-09-17 16:20',
+            values: { projCount: 12, catPlanCount: 18, catStarted: 15, catDone: 11, doneCoverProj: 34, saveAmount: 8950000, jcAmountSum: 156500000,
+                    weekSummary: '本周完成钢筋集采评标并发出中标通知，混凝土合同条款谈判完成；电缆集采发标后仅 2 家回标，需扩大寻源。',
+                    keyProject: '利雅得地铁项目盾构机主轴承采购周期 26 周，已锁定产能；迪拜绿地中心幕墙单元件长周期设备排产至 12 月。' } },
+      W2: { status: '已提交', zero: false, lastSubmit: '2026-09-17 16:22', rows: JSON.parse(JSON.stringify(W2_ROWS_SC1)) },
+      W3: { status: '填报中', zero: false, rows: JSON.parse(JSON.stringify(W3_ROWS_SC1)) },
+      W4: { status: '已提交', zero: false, lastSubmit: '2026-09-17 16:30', rows: JSON.parse(JSON.stringify(W4_ROWS_SC1)) },
+      W5: { status: '已通过', zero: false, lastSubmit: '2026-09-17 16:35', passedBy: '王建国', passedTime: '2026-09-18 09:10', rows: JSON.parse(JSON.stringify(W5_ROWS_SC1)) },
+      W6: { status: '-', zero: false }
+    },
+    SC2: {
+      W1: { status: '已通过', zero: false, lastSubmit: '2026-09-17 11:05', passedBy: '王建国', passedTime: '2026-09-17 15:00',
+            values: { projCount: 9, catPlanCount: 14, catStarted: 12, catDone: 10, doneCoverProj: 21, saveAmount: 5340000, jcAmountSum: 36400000,
+                    weekSummary: '本周木方模板区域集采首批到货验收完成；周转材料租赁定标报告审批中，预计下周定标。',
+                    keyProject: '胡志明市电厂项目汽轮机长周期设备已签订供货协议，预计 2027 年 3 月到货。' } },
+      W2: { status: '已提交', zero: false, lastSubmit: '2026-09-17 11:08', rows: JSON.parse(JSON.stringify(W2_ROWS_SC2)) },
+      W3: { status: '已提交', zero: false, lastSubmit: '2026-09-17 11:12', rows: JSON.parse(JSON.stringify(W3_ROWS_SC2)) },
+      W4: { status: '已提交', zero: false, lastSubmit: '2026-09-17 11:15', rows: JSON.parse(JSON.stringify(W4_ROWS_SC2)) },
+      W5: { status: '已提交', zero: false, lastSubmit: '2026-09-17 11:18', rows: JSON.parse(JSON.stringify(W5_ROWS_SC2)) },
+      W6: { status: '-', zero: false }
+    },
+    SC3: {
+      W1: { status: '填报中', zero: false },
+      W2: { status: '填报中', zero: false, rows: [{ id: 'W2-1', name: '周建军', unitName: '非洲共享中心', position: '采购经理', center: '非洲共享中心', fullTime: '专职' }] },
+      W3: { status: '填报中', zero: false, rows: [] },
+      W4: { status: '未开始', zero: false },
+      W5: { status: '未开始', zero: false },
+      W6: { status: '-', zero: false }
+    },
+    SC4: {
+      W1: { status: '已通过', zero: false, lastSubmit: '2026-09-17 17:00', passedBy: '王建国', passedTime: '2026-09-18 09:12',
+            values: { projCount: 6, catPlanCount: 20, catStarted: 18, catDone: 16, doneCoverProj: 28, saveAmount: 12400000, jcAmountSum: 268000000,
+                    weekSummary: '钢材出口集采第二批次集港完成，累计发运 16 万吨；本周新增 2 家出口供应商准入考察。',
+                    keyProject: '海外 9 个项目钢材统一集采，单价较属地采购低约 11%，年度预计节约 1240 万元。' } },
+      W2: { status: '已提交', zero: false, lastSubmit: '2026-09-17 17:02', rows: [{ id: 'W2-1', name: '徐涛', unitName: '国内共享中心', position: '集采负责人', center: '国内共享中心', fullTime: '专职' }] },
+      W3: { status: '已提交', zero: false, lastSubmit: '2026-09-17 17:05', rows: [{ id: 'W3-1', category: '钢材出口集采', level: '局级集采', leadUnit: '局采购管理部', owner: '王建国', inPlan: '是', unit: '国内共享中心', volume: '24 万吨', coverProj: '海外 9 个项目', amount: 268000000, saveAmount: 12400000, bidStartTime: '2026/05/10', bidEndTime: '2026/12/31', stage: '执行中', progress: '第二批次集港完成', nextPlan: '第三批次集港及报关', purchaseNo: 'JC-2026-CN-001', highlight: '国内集采出海，单价较属地采购低 11%', overdue: '否', firstResource: '否', note: '' }] },
+      W4: { status: '已通过', zero: false, lastSubmit: '2026-09-17 17:08', passedBy: '王建国', passedTime: '2026-09-18 09:20', rows: [] },
+      W5: { status: '已通过', zero: false, lastSubmit: '2026-09-17 17:10', passedBy: '王建国', passedTime: '2026-09-18 09:20', rows: [] },
+      W6: { status: '-', zero: false }
+    },
+    RH1: {
+      W1: { status: '填报中', zero: false },
+      W2: { status: '-', zero: false }, W3: { status: '-', zero: false },
+      W4: { status: '-', zero: false }, W5: { status: '-', zero: false }, W6: { status: '-', zero: false }
+    },
+    /* W6 由各二级单位（项目）填报 */
+    U01: { W1: { status: '-' }, W2: { status: '-' }, W3: { status: '-' }, W4: { status: '-' }, W5: { status: '-' },
+           W6: { status: '已提交', zero: false, lastSubmit: '2026-09-17 15:40', rows: JSON.parse(JSON.stringify(W6_ROWS_U01)) } },
+    U02: { W1: { status: '-' }, W2: { status: '-' }, W3: { status: '-' }, W4: { status: '-' }, W5: { status: '-' },
+           W6: { status: '已提交', zero: false, lastSubmit: '2026-09-17 14:20', rows: JSON.parse(JSON.stringify(W6_ROWS_U02)) } },
+    U03: { W1: { status: '-' }, W2: { status: '-' }, W3: { status: '-' }, W4: { status: '-' }, W5: { status: '-' }, W6: { status: '未开始', zero: false } },
+    U06: { W1: { status: '-' }, W2: { status: '-' }, W3: { status: '-' }, W4: { status: '-' }, W5: { status: '-' },
+           W6: { status: '已通过', zero: false, lastSubmit: '2026-09-17 10:00', passedBy: '李秀芳', passedTime: '2026-09-17 16:00', rows: [{ id: 'W6-1', project: '胡志明市电厂项目', country: '越南', address: '越南胡志明市第七郡', contractAmount: 780000000, output: 520000000, purchaseTotal: 259100000, materialPurchase: 90200000, laborPurchase: 168900000, reduceRate: '2.10%', benefitRate: '12.40%', gjLossRate: '2.60%', hntLossRate: '1.50%', localSupplierRate: '66.00%', localPurchaseRate: '51.00%', centralRate: '38.00%', hasRisk: '是', riskType: '供应中断', riskLevel: '中', riskDesc: '属地砂石供应中断，雨季运输受限', estLoss: 1800000, strategy: '启用备选供应商，加严库存预警', resolveTime: '2026/11/30', owner: '项目物资部 / 周涛' }] } }
+  }
+};
+/* 历史周报任务（已关闭，仅作归档展示）
+   第1/2周数据以第3周为基准按周回退（集采推进类递减），形成可对比的月内周趋势；
+   历史周记录统一置为"已通过"（展示规则 24：历史周只读、不回写） */
+WEEKLY_STORE['T-2026W37'] = JSON.parse(JSON.stringify(WEEKLY_STORE['T-2026W38']));
+WEEKLY_STORE['T-2026W36'] = JSON.parse(JSON.stringify(WEEKLY_STORE['T-2026W38']));
+
+/* 周次期次配置（PRD 6.1 ②：期次选择器按「年度+周次」切换，支持按月展示该月全部周次） */
+const WEEK_MONTH = '2026年9月';
+const WEEK_PERIODS = [
+  { period: '2026年9月第1周', month: WEEK_MONTH, weekNo: 1, taskId: 'T-2026W36', status: '已关闭' },
+  { period: '2026年9月第2周', month: WEEK_MONTH, weekNo: 2, taskId: 'T-2026W37', status: '已关闭' },
+  { period: '2026年9月第3周', month: WEEK_MONTH, weekNo: 3, taskId: 'T-2026W38', status: '进行中' },
+  { period: '2026年9月第4周', month: WEEK_MONTH, weekNo: 4, taskId: 'T-2026W39', status: '未开始' }
+];
+(function buildWeeklyHistory() {
+  const backfill = {
+    'T-2026W37': { t: '2026-09-11 09:30', catDone: -2, catStarted: -1, coverProj: -6, saveFactor: 0.78, jcFactor: 0.72 },
+    'T-2026W36': { t: '2026-09-04 09:30', catDone: -4, catStarted: -3, coverProj: -12, saveFactor: 0.55, jcFactor: 0.45 }
+  };
+  Object.keys(backfill).forEach(tid => {
+    const d = backfill[tid];
+    const clone = JSON.parse(JSON.stringify(WEEKLY_STORE['T-2026W38']));
+    ['SC1', 'SC2', 'SC4'].forEach(id => {
+      const w1 = clone[id] && clone[id].W1;
+      if (w1 && w1.values) {
+        const v = w1.values;
+        v.catDone = Math.max(0, v.catDone + d.catDone);
+        v.catStarted = Math.max(0, v.catStarted + d.catStarted);
+        v.doneCoverProj = Math.max(0, v.doneCoverProj + d.coverProj);
+        v.saveAmount = Math.round(v.saveAmount * d.saveFactor);
+        v.jcAmountSum = Math.round(v.jcAmountSum * d.jcFactor);
+      }
+      const w3 = clone[id] && clone[id].W3;
+      if (w3 && w3.rows) w3.rows.forEach(r => {
+        r.amount = Math.round((Number(r.amount) || 0) * d.jcFactor);
+        r.saveAmount = Math.round((Number(r.saveAmount) || 0) * d.saveFactor);
+      });
+      ['W1', 'W2', 'W3', 'W4', 'W5'].forEach(w => {
+        const rec = clone[id][w];
+        if (rec && rec.status !== '-') {
+          rec.status = '已通过'; rec.lastSubmit = d.t;
+          rec.passedBy = '王建国'; rec.passedTime = d.t.replace('09:30', '15:00');
+        }
+      });
+    });
+    ['U01', 'U02', 'U06'].forEach(id => {
+      const rec = clone[id] && clone[id].W6;
+      if (rec && rec.status !== '-') {
+        rec.status = '已通过'; rec.lastSubmit = d.t;
+        rec.passedBy = '李秀芳'; rec.passedTime = d.t.replace('09:30', '16:00');
+      }
+    });
+    WEEKLY_STORE[tid] = clone;
+  });
+})();
+/* 周度报表仅展示"已提交/已通过"的周报数据（展示规则 24） */
+function weekReportable(rec) { return !!rec && (rec.status === '已提交' || rec.status === '已通过'); }
+/* 周次趋势：从各周 W1 数值汇总（率类按分子/分母重算，规则 18） */
+function weekTrend(week) {
+  const store = WEEKLY_STORE[week.taskId] || {};
+  let projCount = 0, catDone = 0, saveAmount = 0, jcAmountSum = 0, reported = 0;
+  SHARED_CENTERS.forEach(sc => {
+    const rec = (store[sc.id] || {}).W1;
+    if (!weekReportable(rec)) return;
+    reported++;
+    const v = rec.values || {};
+    projCount += Number(v.projCount) || 0;
+    catDone += Number(v.catDone) || 0;
+    saveAmount += Number(v.saveAmount) || 0;
+    jcAmountSum += Number(v.jcAmountSum) || 0;
+  });
+  return { projCount: projCount, catDone: catDone, saveAmount: saveAmount, jcAmountSum: jcAmountSum, rate: pctDisp(saveAmount, jcAmountSum), reported: reported };
+}
+
+/* ---------- 月报 ← 周报 取数映射（ZY-HY-TB-070，V1.1 第 7.2 / 10.8~10.14 节） ---------- */
+const FETCH_SOURCES = {
+  weekTaskId: 'T-2026W38',
+  weekLabel: '2026年9月第3周周报',        // 当月最后一个已提交周报（Q6 默认口径）
+  map: {
+    W1: { jcAmountSum: { from: 'W3', desc: 'W3 集采跟踪表按主体汇总' } },
+    D1: {
+      jc_amount: { from: 'W3', desc: '集采跟踪表按单位汇总（W3 汇总自 SC1 中东共享中心）', coverable: true }
+    },
+    D3: {
+      zc_dc: { from: 'W5', desc: '调拨台账按调入组织汇总', coverable: true }
+    },
+    D4: {
+      name: { from: 'W2', desc: '人员配备表' }, dept: { from: 'W2', desc: '人员配备表·所在单位' },
+      position: { from: 'W2', desc: '人员配备表·职务' }, fullTime: { from: 'W2', desc: '人员配备表·是否专职' }
+    },
+    D5: {
+      /* 裁定③：供货类型取自周报（W4 供应类型），D5 带出项由 12 项增至 13 项 */
+      type: { from: 'W4', field: 'supplyType', desc: 'W4 分供方资源库·供应类型' },
+      name: { from: 'W4' }, region: { from: 'W4' }, contact: { from: 'W4' }, phone: { from: 'W4' },
+      email: { from: 'W4' }, inTime: { from: 'W4' }, inspector: { from: 'W4' }, biz: { from: 'W4' },
+      category: { from: 'W4' }, rating: { from: 'W4' }, countries: { from: 'W4' }, paymentTerm: { from: 'W4' }
+    }
+  },
+  /* 月报另行填报项（周报未覆盖） */
+  manual: { D5: ['advDesc', 'hq', 'center'] }
+};
+
+/* 月报带出值（按单位）：值 + 来源期次标注 */
+const MONTHLY_FETCHED = {
+  U01: {
+    D1: { jc_amount: { value: 142600000, source: '取自 2026年9月第3周周报 W3（中东共享中心汇总）' } },
+    D3: { zc_dc: { value: 5320000, source: '取自 2026年9月第3周周报 W5（按调入组织汇总）' } }
+  },
+  U02: {
+    D1: { jc_amount: { value: 198800000, source: '取自 2026年9月第3周周报 W3' } },
+    D3: { zc_dc: { value: 8940000, source: '取自 2026年9月第3周周报 W5' } }
+  }
+};
+
+/* 月报与周报一致性校验基准：W6 按二级单位「真实汇总」（业务规则 11/13/14，PRD 7.2/7.3）
+   金额类：项目行求和；率类：按各项目采购总额加权（规则 18 禁止对率直接平均）；
+   单位当月无已提交 W6（A13 缺失兜底）→ 返回 null，取数链路转手工填报并在汇总标注数据来源。 */
+function w6Baseline(uid) {
+  const store = (WEEKLY_STORE[FETCH_SOURCES.weekTaskId] || {})[uid] || {};
+  const rows = (store.W6 && store.W6.rows) || [];
+  if (!rows.length) return null;
+  const pct = v => {
+    const n = parseFloat(String(v === undefined || v === null ? '' : v).replace(/[%,\s]/g, ''));
+    return isNaN(n) ? null : n;
+  };
+  const sumOf = k => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
+  const wAvg = k => {
+    let num = 0, den = 0;
+    rows.forEach(r => {
+      const v = pct(r[k]);
+      const w = Number(r.purchaseTotal) || 0;
+      if (v !== null && w) { num += v * w; den += w; }
+    });
+    return den ? num / den : null;
+  };
+  return {
+    purchaseTotal: sumOf('purchaseTotal'),
+    materialPurchase: sumOf('materialPurchase'),
+    laborPurchase: sumOf('laborPurchase'),
+    reduceRate: wAvg('reduceRate'),
+    benefitRate: wAvg('benefitRate'),
+    gjLossRate: wAvg('gjLossRate'),
+    hntLossRate: wAvg('hntLossRate'),
+    centralRate: wAvg('centralRate'),
+    rowCount: rows.length,
+    note: '取自 ' + FETCH_SOURCES.weekLabel + ' W6 按单位汇总（' + rows.length + ' 个项目行；金额求和、率类按采购总额加权）'
+  };
+}
+/* 当月无已提交周报的单位（A13 缺失兜底：转手工填报并在汇总标注数据来源） */
+const WEEKLY_MISSING_UNITS = ['U03', 'U05', 'U08', 'U12', 'U13', 'U14'];
+const CONSISTENCY_CONFIG = { deviationWarn: 0.05 };   // ±5% 提示核对（可配置）
 
 /* ============================================================
    D1~D3 表单值注入 FILL_STORE
@@ -580,14 +1027,16 @@ FILL_STORE['T-2026H1']['U01'].D6.rows = JSON.parse(JSON.stringify(D6_ROWS_U01));
   Object.keys(D1_TUPLES).forEach(uid => {
     const v = {};
     keys1.forEach((k, i) => { v[k] = D1_TUPLES[uid][i]; });
-    const rec = FILL_STORE['T-2026H1'][uid].D1;
+    const rec = FILL_STORE['T-2026M09'][uid].D1;
     if (!rec.values) rec.values = v;
   });
   const keys2 = ['hnt_cgL', 'hnt_ljL', 'hnt_csL', 'hnt_tkL', 'hnt_tuL', 'gj_cgL', 'gj_dr', 'gj_dc', 'gj_kc', 'gj_syL', 'gj_csL', 'gj_ljL', 'gj_tuL'];
   Object.keys(D2_TUPLES).forEach(uid => {
     const v = {};
     keys2.forEach((k, i) => { v[k] = D2_TUPLES[uid][i]; });
-    const rec = FILL_STORE['T-2026H1'][uid].D2;
+    /* 裁定④：钢筋同口径用量为需填报字段，Mock 按其口径预置（实际用量 − 措施用量 − 临建用量） */
+    v.gj_tkL = v.gj_syL - v.gj_csL - v.gj_ljL;
+    const rec = FILL_STORE['T-2026M09'][uid].D2;
     if (!rec.values) rec.values = v;
   });
   const keys3 = ['gj_cgL', 'gj_tuL', 'gj_syL', 'hnt_ysL', 'hnt_xhL', 'cz_ysL', 'cz_xhL', 'zc_yz', 'zc_dc'];
@@ -596,38 +1045,68 @@ FILL_STORE['T-2026H1']['U01'].D6.rows = JSON.parse(JSON.stringify(D6_ROWS_U01));
     keys3.forEach((k, i) => { v[k] = D3_TUPLES[uid][i]; });
     /* 6 家单位瓷砖分母为 0：排版预算量与消耗量均为 0（线下 #DIV/0! → 线上"/"） */
     if (D3_ZERO_TILE_UNITS.indexOf(uid) >= 0) { v.cz_ysL = 0; v.cz_xhL = 0; }
-    const rec = FILL_STORE['T-2026H1'][uid].D3;
+    const rec = FILL_STORE['T-2026M09'][uid].D3;
     if (!rec.values) rec.values = v;
   });
 })();
 
-/* 二公司 D1 预置勾稽问题：劳务采购效益额与公式重算值偏差 +2.40 元（触发 V-G02 强校验退回） */
-FILL_STORE['T-2026H1']['U03'].D1.values.lw_income = 158700000;
-FILL_STORE['T-2026H1']['U03'].D1.values.lw_purchase = 151199997.6;
+/* 二公司 D1 预置勾稽问题：导入行携带的线下手工计算值「劳务采购效益额 7,500,000.00 元」
+   与系统按公式重算值 7,500,002.40 元偏差 +2.40 元（超 V-G02 容差 ±1 元）→ 提交时阻断，
+   可修正数据或走「尾差放行」（填报端留痕申请 → 局级复核书面确认放行，业务规则 4/20）。 */
+FILL_STORE['T-2026M09']['U03'].D1.values.lw_income = 158700000;
+FILL_STORE['T-2026M09']['U03'].D1.values.lw_purchase = 151199997.6;
+FILL_STORE['T-2026M09']['U03'].D1.importedCalc = { lw_benefit: 7500000, source: '线下《月报-26采购指标》导入计算列' };
+
+/* 海外公司 D1 预置一致性校验问题（A13 演示路径，基准＝W6 按单位汇总）：
+   ① 劳务与专业分包采购总金额月报值 200,600,000.00 元 ＜ 周报 W6 汇总值 203,000,000.00 元
+      （U01 两个项目行劳务分包采购合计）→ 触发 V-G07 阻断，可填写差异说明留痕放行；
+   ② 物资设备采购总金额 331,200,000.00 元 与 W6 汇总采购总额 305,000,000.00 元 偏差 +8.6% → V-G08 提示核对（不阻断）；
+   ③ 率类：综合采购成本降低率月报重算值与 W6 按采购总额加权的汇总率偏差超 ±5% → V-G08 提示（率类不阻断）。 */
+FILL_STORE['T-2026M09']['U01'].D1.values.lw_purchase = 200600000;
 
 /* ============================================================
    指标字典（ZY-HY-TB-060，节选核心指标）
    ============================================================ */
 const INDICATOR_DICT = [
-  { code: 'D1-01', name: '物资设备采购对应业主收入', dataset: 'D1', unit: '元', type: '数值', source: '填报', required: '是', formula: '—', rules: 'V-F01' },
-  { code: 'D1-04', name: '物资设备采购效益额', dataset: 'D1', unit: '元', type: '数值', source: '计算', required: '—', formula: '对应业主收入 − 采购总金额', rules: 'V-G02' },
-  { code: 'D1-05', name: '物资设备采购效益率', dataset: 'D1', unit: '%', type: '数值', source: '计算', required: '—', formula: '效益额 ÷ 对应业主收入', rules: 'V-G03 / V-T01' },
-  { code: 'D1-15', name: '采购总金额', dataset: 'D1', unit: '元', type: '数值', source: '计算', required: '—', formula: '物资设备采购总金额 + 劳务与专业分包采购总金额', rules: 'V-G01' },
-  { code: 'D1-17', name: '综合采购效益率', dataset: 'D1', unit: '%', type: '数值', source: '计算', required: '—', formula: '效益总额 ÷ 对应业主收入合计', rules: 'V-G03 / V-T01' },
-  { code: 'D1-21', name: '中国资源引入率', dataset: 'D1', unit: '%', type: '数值', source: '计算', required: '—', formula: '中国资源引用金额 ÷ 采购总金额', rules: 'V-G03 / V-T01' },
-  { code: 'D2-06', name: '混凝土结余率', dataset: 'D2', unit: '%', type: '数值', source: '计算', required: '—', formula: '（图纸同口径用量 − 图纸计算量）÷ 图纸计算量', rules: 'V-G04 / V-T01' },
-  { code: 'D2-16', name: '钢筋节超量', dataset: 'D2', unit: 't', type: '数值', source: '计算', required: '—', formula: '图纸量 − 同口径用量', rules: 'V-G04' },
-  { code: 'D2-17', name: '钢筋节超率', dataset: 'D2', unit: '%', type: '数值', source: '计算', required: '—', formula: '节超量 ÷ 图纸量', rules: 'V-G04 / V-T01' },
-  { code: 'D3-04', name: '钢筋损耗率', dataset: 'D3', unit: '%', type: '数值', source: '计算', required: '—', formula: '（实际用量 − 图纸净用量）÷ 图纸净用量', rules: 'V-G05 / V-T01' },
-  { code: 'D3-07', name: '混凝土损耗率', dataset: 'D3', unit: '%', type: '数值', source: '计算', required: '—', formula: '（实际消耗量 − 施工图预算量）÷ 施工图预算量', rules: 'V-G05 / V-T01' },
-  { code: 'D3-10', name: '瓷砖施工损耗率', dataset: 'D3', unit: '%', type: '数值', source: '计算', required: '—', formula: '（实际消耗量 − 排版预算量）÷ 排版预算量', rules: 'V-G05 / V-T01' },
-  { code: 'D3-13', name: '项目资产周转率', dataset: 'D3', unit: '%', type: '数值', source: '计算', required: '—', formula: '调出资产原值 ÷ 项目资产原值', rules: 'V-G05 / V-T01' },
-  { code: 'D4-11', name: '工作年限', dataset: 'D4', unit: '年', type: '数值', source: '计算', required: '—', formula: '参加工作起始时间至报送截止日自动取整', rules: 'V-G06' },
-  { code: 'D4-21', name: '从事岗位', dataset: 'D4', unit: '—', type: '枚举', source: '填报', required: '是', formula: '—', rules: 'V-E02', dict: '采购管理/物资管理/采购物资管理' },
-  { code: 'D5-12', name: '供应商评级', dataset: 'D5', unit: '—', type: '枚举', source: '填报', required: '是', formula: '—', rules: 'V-E01', dict: 'A级-推荐使用/B级-建议使用/C级-审慎使用' },
-  { code: 'D5-02', name: '供应商名称', dataset: 'D5', unit: '—', type: '文本', source: '填报', required: '是', formula: '—', rules: 'V-C03' },
-  { code: 'D6-11', name: '禁用期限', dataset: 'D6', unit: '月', type: '数值', source: '填报', required: '是', formula: '—', rules: 'V-F01' },
-  { code: 'D6-14', name: '关联警示', dataset: 'D6', unit: '—', type: '标签', source: '带出', required: '—', formula: '与 D5 合格库交叉比对', rules: 'V-C03' }
+  { code: 'D1-01', name: '物资设备采购对应业主收入', dataset: 'D1', unit: '元', type: '数值', source: '填报', way: '需填报', required: '是', formula: '—', rules: 'V-F01' },
+  { code: 'D1-04', name: '物资设备采购效益额', dataset: 'D1', unit: '元', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '对应业主收入 − 采购总金额', rules: 'V-G02' },
+  { code: 'D1-05', name: '物资设备采购效益率', dataset: 'D1', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '效益额 ÷ 对应业主收入', rules: 'V-G03 / V-T01' },
+  { code: 'D1-15', name: '采购总金额', dataset: 'D1', unit: '元', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '物资设备采购总金额 + 劳务与专业分包采购总金额；两个分项与周报 W6 按单位汇总值比对（月报＜周报 → V-G07 阻断；偏差＞±5% → V-G08 提示）', rules: 'V-G01 / V-G07 / V-G08' },
+  { code: 'D1-17', name: '综合采购效益率', dataset: 'D1', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '效益总额 ÷ 对应业主收入合计', rules: 'V-G03 / V-T01 / V-G08' },
+  { code: 'D1-21', name: '中国资源引入率', dataset: 'D1', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '中国资源引用金额 ÷ 采购总金额', rules: 'V-G03 / V-T01' },
+  { code: 'D1-23', name: '综合采购成本降低率', dataset: 'D1', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '降低总额 ÷ 标准成本合计；W6 汇总降低率为校验基准', rules: 'V-G03 / V-G08' },
+  { code: 'D2-06', name: '混凝土结余率', dataset: 'D2', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '（图纸同口径用量 − 图纸计算量）÷ 图纸计算量', rules: 'V-G04 / V-T01' },
+  { code: 'D2-16', name: '钢筋节超量', dataset: 'D2', unit: 't', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '图纸量 − 同口径用量', rules: 'V-G04' },
+  { code: 'D2-17', name: '钢筋节超率', dataset: 'D2', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '节超量 ÷ 图纸量', rules: 'V-G04 / V-T01' },
+  { code: 'D3-04', name: '钢筋损耗率', dataset: 'D3', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '（实际用量 − 图纸净用量）÷ 图纸净用量；W6 汇总损耗率为校验基准', rules: 'V-G05 / V-T01 / V-G08' },
+  { code: 'D3-07', name: '混凝土损耗率', dataset: 'D3', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '（实际消耗量 − 施工图预算量）÷ 施工图预算量；W6 汇总损耗率为校验基准', rules: 'V-G05 / V-T01 / V-G08' },
+  { code: 'D3-10', name: '瓷砖施工损耗率', dataset: 'D3', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '（实际消耗量 − 排版预算量）÷ 排版预算量', rules: 'V-G05 / V-T01' },
+  { code: 'D3-13', name: '项目资产周转率', dataset: 'D3', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '调出资产原值 ÷ 项目资产原值', rules: 'V-G05 / V-T01' },
+  { code: 'D4-11', name: '工作年限', dataset: 'D4', unit: '年', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '参加工作起始时间至报送截止日自动取整', rules: 'V-G06' },
+  { code: 'D4-21', name: '从事岗位', dataset: 'D4', unit: '—', type: '枚举', source: '填报', way: '需填报', required: '是', formula: '—', rules: 'V-E02', dict: '采购管理/物资管理/采购物资管理' },
+  { code: 'D5-12', name: '供应商评级', dataset: 'D5', unit: '—', type: '枚举', source: '带出', way: '自动取自周报', required: '是', formula: 'W4 分供方资源库·评级', rules: 'V-E01', dict: 'A级-推荐使用/B级-建议使用/C级-审慎使用' },
+  { code: 'D5-02', name: '供应商名称', dataset: 'D5', unit: '—', type: '文本', source: '带出', way: '自动取自周报', required: '是', formula: 'W4 分供方资源库', rules: 'V-C03' },
+  { code: 'D6-11', name: '禁用期限', dataset: 'D6', unit: '月', type: '数值', source: '填报', way: '需填报', required: '是', formula: '—', rules: 'V-F01' },
+  { code: 'D6-14', name: '关联警示', dataset: 'D6', unit: '—', type: '标签', source: '带出', way: '系统自动算', required: '—', formula: '与 D5 合格库交叉比对', rules: 'V-C03' },
+  /* —— V1.1 新增：周月衔接（自动取自周报）与周报指标 —— */
+  { code: 'D1-22', name: '物资设备集采引用金额', dataset: 'D1', unit: '元', type: '数值', source: '带出', way: '自动取自周报', required: '是', formula: 'W3 集采跟踪表按单位汇总', rules: 'A11 / A12' },
+  { code: 'D2-15', name: '钢筋同口径用量', dataset: 'D2', unit: 't', type: '数值', source: '填报', way: '需填报', required: '是', formula: '口径参考：实际用量 − 措施用量 − 临建用量（系统按口径核对）', rules: 'V-G04' },
+  { code: 'D3-12', name: '调出资产原值金额', dataset: 'D3', unit: '元', type: '数值', source: '带出', way: '自动取自周报', required: '是', formula: 'W5 调拨台账按调入组织汇总', rules: 'A11 / A12' },
+  { code: 'D4-01', name: '姓名/所在单位/职务/是否专职', dataset: 'D4', unit: '—', type: '文本', source: '带出', way: '自动取自周报', required: '是', formula: 'W2 人员配备表', rules: 'V-C02' },
+  { code: 'D5-00', name: '供货类型', dataset: 'D5', unit: '—', type: '枚举', source: '带出', way: '自动取自周报', required: '是', formula: 'W4 分供方资源库·供应类型（裁定：供货类型取自周报）', rules: 'V-E03', dict: '物资/租赁/服务/劳务分包' },
+  { code: 'D5-01', name: '分供商名录（13 项）', dataset: 'D5', unit: '—', type: '文本', source: '带出', way: '自动取自周报', required: '是', formula: 'W4 分供方资源库（供货类型/名称/注册地/联系人/电话/邮箱/入库时间/考察人/业务往来/品类/评级/可供应国别/账期）', rules: 'V-C03' },
+  { code: 'W1-07', name: '集采金额合计', dataset: 'W1', unit: '元', type: '数值', source: '带出', way: '自动取自周报', required: '是', formula: 'W3 集采跟踪表按主体汇总', rules: 'V-F01' },
+  { code: 'W1-08', name: '采购成本降低率', dataset: 'W1', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '采购成本降低额 ÷ 集采金额合计', rules: 'V-T01' },
+  { code: 'W3-09', name: '集采金额', dataset: 'W3', unit: '元', type: '数值', source: '填报', way: '需填报', required: '是', formula: '—', rules: 'V-F01' },
+  { code: 'W3-13', name: '招采发起时间 / 预计完成时间', dataset: 'W3', unit: '—', type: '日期', source: '填报', way: '需填报', required: '是', formula: '—', rules: 'V-F02' },
+  { code: 'W3-14', name: '下周计划 / 采购编号 / 亮点 / 备注', dataset: 'W3', unit: '—', type: '文本', source: '填报', way: '需填报', required: '否', formula: '—', rules: 'V-F02' },
+  { code: 'W3-20', name: '是否首次资源配置', dataset: 'W3', unit: '—', type: '枚举', source: '填报', way: '需填报', required: '是', formula: '—', rules: 'V-E03', dict: '是/否' },
+  { code: 'W4-16', name: '账期', dataset: 'W4', unit: '—', type: '枚举', source: '填报', way: '需填报', required: '是', formula: '—', rules: 'V-E03', dict: '预付/货到付款/月结30天/月结60天/月结90天/按节点结算' },
+  { code: 'W4-15', name: '资源所属国别', dataset: 'W4', unit: '—', type: '枚举', source: '填报', way: '需填报', required: '是', formula: '—', rules: 'V-E03', dict: '属地/属地中国/中国企业国外办厂/国内产品出口企业' },
+  { code: 'W6-02', name: '项目地址', dataset: 'W6', unit: '—', type: '文本', source: '填报', way: '需填报', required: '是', formula: '—', rules: 'V-F02' },
+  { code: 'W6-05', name: '其中：物资设备采购', dataset: 'W6', unit: '元', type: '数值', source: '填报', way: '需填报', required: '是', formula: '采购总额中的物资设备分项', rules: 'V-F01' },
+  { code: 'W6-08', name: '综合采购成本降低率', dataset: 'W6', unit: '%', type: '数值', source: '计算', way: '系统自动算', required: '—', formula: '项目级率类，按采购总额加权汇总后作月报 D1 校验基准（偏差>±5% 仅提示核对）', rules: 'V-G08' },
+  { code: 'W6-18', name: '风险描述 / 预计损失 / 化解时间', dataset: 'W6', unit: '—', type: '文本', source: '填报', way: '需填报', required: '条件必填', formula: '有风险时必填，无风险填"/"', rules: 'V-F01' }
 ];
 
 /* 枚举字典配置（枚举名 / 维护状态 / 待决事项标注） */
@@ -639,29 +1118,34 @@ const ENUM_DICT_CONFIG = [
   { key: 'education', name: '学历', items: ENUMS.education, status: '已启用', note: 'V-E02' },
   { key: 'post', name: '从事岗位', items: ENUMS.post, status: '待收敛', note: 'Q2：待业务确认"采购物资管理"归类后收敛为两类' },
   { key: 'sharedCenter', name: '所属共享中心', items: ENUMS.sharedCenter, status: '已启用', note: '按配置开放共享中心字段' },
-  { key: 'gender', name: '性别', items: ENUMS.gender, status: '已启用', note: '' }
+  { key: 'gender', name: '性别', items: ENUMS.gender, status: '已启用', note: '' },
+  /* V1.1 新增（W4 分供方资源库） */
+  { key: 'resourceOrigin', name: '资源所属国别', items: ENUMS.resourceOrigin, status: '已启用', note: 'V1.1 新增：属地/属地中国/中国企业国外办厂/国内产品出口企业' },
+  { key: 'paymentTerm', name: '账期', items: ENUMS.paymentTerm, status: '已启用', note: 'V1.1 新增：W4 填报 → 自动带出至月报 D5' }
 ];
 
-/* 期间配置 */
+/* 期间与频率配置（V1.1 双频：周报每周五 / 月报每月底） */
 const PERIOD_CONFIG = [
-  { period: '2026年上半年', type: '半年度', status: '填报中', deadline: '2026-09-25', task: 'T-2026H1' },
-  { period: '2026年三季度', type: '季度（专项）', status: '未开始', deadline: '2026-10-20', task: 'T-2026Q3R' },
-  { period: '2025年下半年', type: '半年度', status: '已截止', deadline: '2026-01-15', task: 'T-2025H2' },
-  { period: '2025年上半年', type: '半年度', status: '已关闭', deadline: '2025-07-15', task: 'T-2025H1' }
+  { period: '2026年9月第3周', freq: '周报', type: '周（每周五）', status: '填报中', deadline: '2026-09-18', task: 'T-2026W38' },
+  { period: '2026年9月', freq: '月报', type: '月（每月底）', status: '填报中', deadline: '2026-09-30', task: 'T-2026M09' },
+  { period: '2026年9月（专项）', freq: '月报', type: '月（专项）', status: '未开始', deadline: '2026-10-20', task: 'T-2026M09RY' },
+  { period: '2026年9月第2周', freq: '周报', type: '周（每周五）', status: '已关闭', deadline: '2026-09-11', task: 'T-2026W37' },
+  { period: '2026年9月第1周', freq: '周报', type: '周（每周五）', status: '已关闭', deadline: '2026-09-04', task: 'T-2026W36' },
+  { period: '2025年12月', freq: '月报', type: '月（每月底）', status: '已截止', deadline: '2026-01-15', task: 'T-2025M12' },
+  { period: '2025年6月', freq: '月报', type: '月（每月底）', status: '已关闭', deadline: '2025-07-15', task: 'T-2025M06' }
 ];
 
-/* ---------- 审计轨迹示例（海外公司 D1） ---------- */
-const AUDIT_LOGS_U01_D1 = [
-  { time: '2026-09-05 16:40', operator: '张伟（海外公司·填报人）', action: '提交填报单', detail: 'D1 采购管理指标提交审核，校验 4 类 18 条规则全部通过' },
-  { time: '2026-09-06 09:15', operator: '陈国强（海外公司·审核人）', action: '单位审核通过', detail: '审核通过，提交局级复核' },
-  { time: '2026-09-08 10:15', operator: '李秀芳（局物资管理部·复核人）', action: '局级复核通过', detail: '复核通过，数据锁定并纳入汇总' }
+/* ---------- 审计轨迹示例（海外公司 D4，含周报带出说明） ---------- */
+const AUDIT_LOGS_U01_D4 = [
+  { time: '2026-09-10 14:35', operator: '张伟（海外公司·填报人）', action: '提交填报单', detail: 'D4 采购及物资管理人员提交审核；姓名/所在单位/职务/是否专职 4 项自动取自 W2 人员配备表，校验通过' },
+  { time: '2026-09-11 09:20', operator: '陈国强（海外公司·审核人）', action: '单位审核通过', detail: '审核通过，提交局级复核' }
 ];
 
-/* ---------- 站内信（顶栏消息） ---------- */
+/* ---------- 站内信（顶栏消息，V1.1 双频） ---------- */
 const MESSAGES = [
-  { id: 1, type: '催办', title: '【催办】2026年上半年数据报送将于 09-25 截止', detail: '贵单位 D3/D4 已提交待审核，D2/D5/D6 填报中，请尽快处理。', time: '2026-09-11 09:00' },
-  { id: 2, type: '退回', title: '二公司 D1 已被局级复核退回', detail: '退回原因：劳务与专业分包采购效益额勾稽偏差超阈值。', time: '2026-09-07 09:45' },
-  { id: 3, type: '待办', title: '填报待办：D5 合格分供商', detail: '2026年上半年海外供应链数据报送任务进行中，点击进入填报。', time: '2026-08-28 09:00' },
-  { id: 4, type: '通过', title: '海外公司 D1 已通过局级复核', detail: '数据已锁定并纳入汇总。', time: '2026-09-08 10:15' },
+  { id: 1, type: '催办', title: '【催办】周报（9月第3周）将于 09-18 截止', detail: '截止前 1 天自动催办：中东共享中心 W3 填报中，非洲共享中心 W2~W5 未报齐，请尽快处理。', time: '2026-09-17 09:00' },
+  { id: 2, type: '待办', title: '月报待办：2026年9月海外供应链数据月报', detail: '已自动带出 2026年9月第3周周报数据（D1 集采金额、D3 调出资产原值、D4 基础信息、D5 名录），请核对确认后补填剩余字段。', time: '2026-09-14 09:00' },
+  { id: 3, type: '退回', title: '二公司 D1 已被局级复核退回', detail: '退回原因：劳务与专业分包采购效益额勾稽偏差超阈值。', time: '2026-09-07 09:45' },
+  { id: 4, type: '覆盖', title: '自动带出值覆盖已留痕', detail: '海外公司 张伟 覆盖 D1「物资设备集采引用金额」带出值：原因"周报集采金额口径与月报月度归属差异"。', time: '2026-09-14 10:30' },
   { id: 5, type: '到期', title: '分供商禁用期到期提醒', detail: '利雅得城市装饰工程公司禁用期将于 2026-06-01 到期，请复核是否移出不合格库。', time: '2026-05-25 09:00' }
 ];

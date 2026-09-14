@@ -7,7 +7,7 @@
 const AppState = {
   role: ROLES[0],        // 当前视角角色（默认局报送管理员）
   page: 'task-manage',   // 当前页面
-  taskId: 'T-2026H1',    // 当前任务上下文
+  taskId: 'T-2026M09',    // 当前任务上下文
   fillCtx: null,         // 填报页上下文 { unitId, dataset, activeTab }
   reviewCtx: null        // 审核页上下文 { unitId, dataset }
 };
@@ -143,7 +143,9 @@ function calcD1(v) {
 function calcD2(v) {
   const r = {};
   r.hnt_jyl = pctDisp(v.hnt_tkL - v.hnt_tuL, v.hnt_tuL);
-  r.gj_tkL = v.gj_syL - v.gj_csL - v.gj_ljL;
+  /* 裁定④：钢筋同口径用量为「需填报」字段（系统不再覆盖该值），此处仅按其值计算节超量/节超率；
+     口径参考值（实际用量 − 措施用量 − 临建用量）由 V-G04 口径核对提示，不作为计算覆盖 */
+  r.gj_tkL = Number(v.gj_tkL);
   r.gj_jcl = v.gj_tuL - r.gj_tkL;
   r.gj_jclv = pctDisp(r.gj_jcl, v.gj_tuL);
   return r;
@@ -285,10 +287,16 @@ function gotoFill(dataset) {
     unitId: AppState.role.id === 'filler' || AppState.role.id === 'auditor' ? 'U01' : 'U01',
     dataset: dataset || null
   };
+  if (dataset && dataset.indexOf('W') === 0) {
+    FillState.freq = '周报';
+    FillState.dataset = dataset;
+    FillState.subjectId = dataset === 'W6' ? 'U01' : 'SC1';
+  }
   navigateTo('my-fill');
 }
 function gotoReview(unitId, dataset) {
   AppState.reviewCtx = { unitId: unitId, dataset: dataset || null };
+  if (dataset && dataset.indexOf('W') === 0) ReviewState.freq = '周报';
   navigateTo('review');
 }
 function gotoProgress(taskId) {
@@ -365,16 +373,32 @@ document.addEventListener('DOMContentLoaded', () => {
   const dsParam = params.get('ds');
   const viewParam = params.get('view');
   const unitParam = params.get('unit');
+  const freqParam = params.get('freq');
 
   if (pageParam === 'task-manage' && viewParam === 'progress') TaskViewState.view = 'progress';
-  if (pageParam === 'my-fill' && dsParam) FillState.dataset = dsParam;
-  if (pageParam === 'summary' && dsParam) SummaryState.dataset = dsParam;
-  if (pageParam === 'config' && dsParam) ConfigState.tab = dsParam;
-  if (pageParam === 'review' && unitParam && dsParam) {
-    ReviewState.view = 'detail';
-    ReviewState.unitId = unitParam;
-    ReviewState.dataset = dsParam;
+  if (pageParam === 'my-fill') {
+    if (freqParam === '周报' || (dsParam && dsParam.indexOf('W') === 0)) {
+      FillState.freq = '周报';
+      FillState.subjectId = dsParam === 'W6' ? 'U01' : 'SC1';
+    }
+    if (dsParam) FillState.dataset = dsParam;
+    if (params.get('subject')) FillState.subjectId = params.get('subject');
   }
+  if (pageParam === 'summary' && dsParam) SummaryState.dataset = dsParam;
+  if (pageParam === 'summary') {
+    if (params.get('week')) SummaryState.weekTaskId = params.get('week');
+    if (params.get('wtab')) SummaryState.wTab = params.get('wtab');
+  }
+  if (pageParam === 'config' && dsParam) ConfigState.tab = dsParam;
+  if (pageParam === 'review') {
+    if (freqParam === '周报' || (dsParam && dsParam.indexOf('W') === 0)) ReviewState.freq = '周报';
+    if (unitParam && dsParam) {
+      ReviewState.view = 'detail';
+      ReviewState.unitId = unitParam;
+      ReviewState.dataset = dsParam;
+    }
+  }
+  if (pageParam === 'task-manage' && params.get('task')) AppState.taskId = params.get('task');
 
   renderRoleMenu();
   /* 菜单全量展示：page 参数命中任一功能项即可直达，否则落到第一个功能项（与视角无关） */

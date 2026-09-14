@@ -1296,6 +1296,20 @@ a:hover { color: var(--color-primary-hover); }
 .dsc-toast--danger::before { content: "✕ "; color: #FF7875; }
 
 /* --- 数据集页签（带状态徽标） --- */
+/* 报表区分组标签（PRD 6.1：月度汇总区 / 周报周度明细区 / 周月对比区） */
+.dsc-dtabs__group-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-md) 0 var(--space-lg);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: -1px;
+  background: var(--color-bg-table-header);
+}
+.dsc-dtabs__group-label:first-child { padding-left: var(--space-sm); }
+
 .dsc-dtabs {
   display: flex;
   gap: var(--space-sm);
@@ -1652,6 +1666,68 @@ a:hover { color: var(--color-primary-hover); }
   align-items: center;
   gap: var(--space-lg);
 }
+
+/* --- 分段控件（频率/维度切换） --- */
+.dsc-seg {
+  display: inline-flex;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-white);
+}
+.dsc-seg__item {
+  padding: 6px var(--space-lg);
+  font-size: var(--font-size-base);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  border-right: 1px solid var(--color-border);
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+.dsc-seg__item:last-child { border-right: none; }
+.dsc-seg__item:hover { color: var(--color-primary); background: var(--color-primary-bg); }
+.dsc-seg__item--active {
+  background: var(--color-primary);
+  color: #FFF;
+  font-weight: var(--font-weight-medium);
+}
+.dsc-seg__item--active:hover { color: #FFF; background: var(--color-primary-active); }
+
+/* --- 周月衔接：自动取自周报字段（A11~A14） --- */
+.dsc-badge-fetched {
+  display: inline-block;
+  margin-left: var(--space-sm);
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  background: #F0F5FF;
+  border: 1px solid #ADC6FF;
+  color: #2F54EB;
+  font-size: var(--font-size-sm);
+  line-height: 18px;
+  font-weight: normal;
+  vertical-align: 1px;
+}
+.dsc-badge-fetched--sm { font-size: 11px; line-height: 16px; padding: 0 5px; margin-left: 4px; }
+.dsc-badge-fetched--overridden {
+  background: var(--color-warning-bg);
+  border-color: #FFD591;
+  color: var(--color-warning);
+}
+.dsc-fetched .dsc-calc-input {
+  background: #F5F7FF;
+  border-style: dashed;
+  border-color: #ADC6FF;
+  color: var(--color-text-primary);
+}
+.dsc-fetched .dsc-form-label { color: var(--color-text-primary); }
+
+/* 校验提示（warning 级，不阻断） */
+.dsc-validate-panel--warn {
+  border-color: #FFD591;
+  background: var(--color-warning-bg);
+}
+.dsc-validate-item--warn { border-color: #FFE58F; }
+.dsc-validate-item__rule--warn { background: var(--color-warning-bg); color: var(--color-warning); }
 
 /* --- 覆盖率标注（部分汇总） --- */
 .dsc-coverage-note {
