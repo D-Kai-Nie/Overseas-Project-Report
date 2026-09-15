@@ -4,7 +4,7 @@
    退回必填原因，全程留痕（审计轨迹）
    ============================================================ */
 
-/* 局级复核分工（可配置）：采购类→采购管理部，物资类→物资管理部（V1.1 覆盖周报） */
+/* 局级复核分工（可配置）：采购类→采购管理部，物资类→物资管理部 */
 const REVIEW_ASSIGN = {
   D1: '局采购管理部', D2: '局物资管理部', D3: '局物资管理部',
   D4: '局采购管理部', D5: '局物资管理部', D6: '局物资管理部',
@@ -14,7 +14,7 @@ const REVIEW_ASSIGN = {
 
 const ReviewState = {
   view: 'list',            // list | detail
-  freq: '月报',            // 月报 | 周报（V1.1 双频复核）
+  freq: '月报',            // 月报 | 周报
   unitId: null, dataset: null,
   checked: {}              // 批量通过勾选
 };
@@ -197,7 +197,7 @@ function renderReviewDetail() {
   /* 填报明细内容 */
   let detailHTML;
   if (rec.zero) {
-    detailHTML = '<div class="dsc-zero-report"><div class="dsc-empty__icon" style="font-size:32px;">∅</div><div><div style="font-weight:var(--font-weight-medium);">本期无数据（零报告）</div><div class="dsc-field-tip">该单位本期无相关业务，零报告计入齐套统计。</div></div></div>';
+    detailHTML = '<div class="dsc-zero-report"><div class="dsc-empty__icon" style="font-size:32px;">∅</div><div><div style="font-weight:var(--font-weight-medium);">本期无数据（零报告）</div></div></div>';
   } else if (dsMeta(ds).mode === 'form') {
     detailHTML = renderReviewFormDetail(ds, rec);
   } else {
@@ -213,7 +213,7 @@ function renderReviewDetail() {
       '<button class="dsc-btn dsc-btn--primary" onclick="passReview()">通过</button>' +
       '<button class="dsc-btn dsc-btn--danger" onclick="openRejectModal()">退回</button>' +
       (isUnitAuditor ? '<button class="dsc-btn dsc-btn--default" onclick="withdrawToDraft()">撤回到草稿</button>' : '') +
-      '<span class="dsc-field-tip">退回必填原因，支持按数据集整单退回；全部操作留痕（A7）。</span>' +
+      '' +
       '</div></div></div>';
   } else if (canWithdraw && !canUnitAudit) {
     /* 单位审核人视角：已通过单位审核、等待局级复核，仅可撤回到草稿 */
@@ -309,12 +309,12 @@ function buildAuditTrail(unitId, ds, rec) {
     const c = rec.consistencyConfirmed[k];
     items.push(auditItem(c.time, c.by, '周月一致性差异说明', '字段 ' + k + '：' + c.reason));
   });
-  /* 勾稽尾差放行（V-G02，业务规则 4/20）：申请/复核书面确认均留痕 */
+  /* 勾稽尾差放行：申请/复核书面确认均留痕 */
   if (rec.varianceWaiver && rec.varianceWaiver.applied) {
     const w = rec.varianceWaiver;
     items.push(auditItem(w.time, w.by, '申请勾稽尾差放行', '规则 ' + (w.rules || []).join('、') + '；原因：' + w.reason + '；状态：' + (w.confirmed ? '已由 ' + (w.confirmedBy || '复核人') + ' 书面确认放行' : '待复核书面确认')));
   }
-  /* 无权限覆盖尝试（A12：无权限不可改，尝试亦留痕） */
+  /* 无权限覆盖尝试 */
   if (rec.deniedOverrides) rec.deniedOverrides.forEach(d => {
     items.push(auditItem(d.time, d.by + '（' + d.role + '）', '覆盖自动带出值·权限校验未通过', d.action + '：当前角色无覆盖权限，操作被拒绝'));
   });
@@ -343,7 +343,7 @@ function passReview() {
     rec.status = '已通过';
     rec.passedBy = AppState.role.id === 'admin' ? '王建国' : '李秀芳';
     rec.passedTime = now;
-    /* 勾稽尾差放行：局级复核环节书面确认（业务规则 4/20），确认后随记录归档 */
+    /* 勾稽尾差放行：局级复核环节书面确认，确认后随记录归档 */
     if (rec.varianceWaiver && rec.varianceWaiver.applied && !rec.varianceWaiver.confirmed) {
       rec.varianceWaiver.confirmed = true;
       rec.varianceWaiver.confirmedBy = rec.passedBy + '（局级复核）';
@@ -366,7 +366,7 @@ function openRejectModal() {
     '<div class="dsc-alert dsc-alert--warning">退回后填报人需按退回原因修改后重新提交；退回操作与原因将写入审计轨迹（退回必填原因）。</div>' +
     '<div class="dsc-form-group dsc-mt-md"><label class="dsc-form-label dsc-form-label--required">退回原因</label>' +
     '<textarea class="dsc-textarea" id="rejectReason" rows="4" placeholder="请填写具体退回原因，如：勾稽偏差超阈值（±1 元），请核对××字段后重新提交"></textarea></div>' +
-    '<div class="dsc-field-tip">支持按数据集整单退回；如存在勾稽尾差确需放行，请复核环节书面确认放行并留痕（业务规则：尾差放行）。</div>',
+    '',
     '<button class="dsc-btn dsc-btn--default" onclick="closeModal()">取消</button>' +
     '<button class="dsc-btn dsc-btn--danger" onclick="doReject()">确认退回</button>');
 }

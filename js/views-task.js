@@ -92,7 +92,7 @@ function renderTaskList() {
   return '' +
     '<div class="dsc-page-header">' +
     '  <div><div class="dsc-page-header__title">报送任务管理</div>' +
-    '  <div class="dsc-field-tip">任务统一下发 → 单位在线填报 → 分级审核 → 自动汇总（ZY-HY-TB-010）</div></div>' +
+    '  </div>' +
     (canCreate ? '<div class="dsc-page-header__actions"><button class="dsc-btn dsc-btn--primary" onclick="openTaskCreateModal()">+ 新增报送任务</button></div>' : '') +
     '</div>' +
 
@@ -139,7 +139,7 @@ function resetTaskFilter() {
   renderPage('task-manage');
 }
 
-/* ---------- 新增 / 编辑任务（V1.1 双频率） ---------- */
+/* ---------- 新增 / 编辑任务 ---------- */
 function openTaskCreateModal(editId, freq, keepName) {
   const t = editId ? TASKS.find(x => x.id === editId) : null;
   const curFreq = freq || (t ? t.freq : '月报');
@@ -157,8 +157,8 @@ function openTaskCreateModal(editId, freq, keepName) {
       f + '（' + (f === '月报' ? '每月底' : '每周五') + '）</div>').join('') +
     '  </div>' +
     '  <div class="dsc-field-tip">' + (curFreq === '月报'
-      ? '月报由 14 家二级单位填报，数据集 D1~D6；数据进入时自动带出当月周报数据（ZY-HY-TB-070）'
-      : '周报由各共享中心/区域总部填报 W1~W5、二级单位（项目）填报 W6；每周五 17:00 前提交') + '</div></div>' +
+      ? '月报由 14 家二级单位填报 D1~D6'
+      : '周报由各共享中心/区域总部填报 W1~W5、二级单位（项目）填报 W6') + '</div></div>' +
     '<div class="dsc-form-row dsc-form-row--2">' +
     '  <div class="dsc-form-group"><label class="dsc-form-label dsc-form-label--required">任务名称</label>' +
     '    <input class="dsc-input" id="tcName" value="' + esc(nameVal) + '" placeholder="如：' + (curFreq === '周报' ? '2026年9月第4周周报' : '2026年10月海外供应链数据月报') + '"></div>' +
@@ -177,11 +177,11 @@ function openTaskCreateModal(editId, freq, keepName) {
     (curFreq === '周报' ? '各共享中心、区域总部、二级单位（项目）' : '全部二级单位（14家）') + '</option>' +
     '    <option value="partial">圈选主体（从组织主数据选择）</option>' +
     '  </select>' +
-    '  <div class="dsc-field-tip">组织与用户从 DSC 统一组织主数据同步，支持按任务圈选</div></div>' +
+    '  </div>' +
     '<div class="dsc-form-row dsc-form-row--2">' +
     '  <div class="dsc-form-group"><label class="dsc-form-label dsc-form-label--required">截止时间</label>' +
     '    <input class="dsc-input" id="tcDeadline" type="date" value="' + (t ? t.deadline : (curFreq === '周报' ? '2026-09-25' : '2026-10-31')) + '">' +
-    '    <div class="dsc-field-tip">' + (curFreq === '周报' ? '每周五 17:00（截止前 1 天系统自动催办未提交主体）' : '每月底后 5 个工作日内齐套（截止前 1 天自动催办）') + '</div></div>' +
+    '    <div class="dsc-field-tip">' + (curFreq === '周报' ? '每周五 17:00' : '每月底后 5 个工作日内齐套') + '</div></div>' +
     '  <div class="dsc-form-group"><label class="dsc-form-label">填报说明附件</label>' +
     '    <input class="dsc-input" type="file" disabled placeholder="演示原型：附件上传已禁用"></div>' +
     '</div>' +
@@ -215,7 +215,7 @@ function doDeleteTaskDraft(id) {
   renderPage('task-manage');
 }
 
-/* 业务规则：同一期间+同一频率+同一数据集范围内，同一填报主体仅允许一个进行中任务（V1.1 规则 1） */
+/* 业务规则：同一期间+同一频率+同一数据集范围内，同一填报主体仅允许一个进行中任务 */
 function saveTask(action) {
   const name = document.getElementById('tcName').value.trim();
   const period = document.getElementById('tcPeriod').value;
@@ -256,7 +256,7 @@ function saveTask(action) {
   };
   TASKS.unshift(task);
   if (action === '下发') {
-    toast('任务已下发：系统向范围内主体的审核人、填报人推送待办；截止前 1 天自动催办', 'success');
+    toast('任务已下发：系统向范围内主体的审核人、填报人推送待办', 'success');
   } else {
     toast('任务已保存为草稿', 'success');
   }
@@ -268,8 +268,8 @@ function publishTask(id) {
   const t = TASKS.find(x => x.id === id);
   openModal('下发确认',
     '<div>确认下发任务「' + esc(t.name) + '」？</div>' +
-    '<div class="dsc-alert dsc-alert--info dsc-mt-md">下发后系统将：① 生成各单位 × 各数据集填报任务单；② 向单位审核人、填报人推送待办；③ 截止前 3 天、1 天自动催办未提交单位。</div>' +
-    '<div class="dsc-field-tip">下发前未产生填报数据时可撤回重配（业务规则 2）。</div>',
+    '<div class="dsc-alert dsc-alert--info dsc-mt-md">下发后系统将：① 生成各单位 × 各数据集填报任务单；② 向单位审核人、填报人推送待办；③ 截止前自动催办未提交单位。</div>' +
+    '',
     '<button class="dsc-btn dsc-btn--default" onclick="closeModal()">取消</button>' +
     '<button class="dsc-btn dsc-btn--primary" onclick="doPublishTask(\'' + id + '\')">确认下发</button>');
 }
@@ -296,7 +296,7 @@ function confirmCloseTask(id) {
     (unPassed.length
       ? '<div class="dsc-alert dsc-alert--warning">当前尚有 ' + unPassed.length + ' 项单位数据集未通过复核（如 ' + unPassed.slice(0, 3).join('、') + '…）。任务关闭后所有关联填报单将<b>只读</b>，未通过数据不再纳入汇总。</div>'
       : '<div class="dsc-alert dsc-alert--success">全部单位数据集均已通过复核，可以关闭任务并归档。</div>') +
-    '<div class="dsc-field-tip">关闭操作留痕：操作人、时间、IP 均记录（验收标准 A7）。</div>',
+    '',
     '<button class="dsc-btn dsc-btn--default" onclick="closeModal()">取消</button>' +
     '<button class="dsc-btn ' + (unPassed.length ? 'dsc-btn--danger' : 'dsc-btn--primary') + '" onclick="doCloseTask(\'' + id + '\')">确认关闭任务</button>');
 }
@@ -406,7 +406,7 @@ function renderProgressBoard() {
       '<div class="dsc-card__title" style="margin-bottom:var(--space-md);">W6 项目供应链风险全景表（由各二级单位/项目填报）</div>' +
       '<div class="dsc-table-wrapper"><table class="dsc-table"><thead><tr><th>二级单位</th><th>状态</th><th>数据量</th><th>最近提交</th><th>操作</th></tr></thead>' +
       '<tbody>' + (rows || '<tr><td colspan="5">暂无数据</td></tr>') + '</tbody></table></div>' +
-      '<div class="dsc-field-tip dsc-mt-sm">W6 按二级单位汇总作为月报一致性校验基准：金额类项目行求和、率类按采购总额加权（不对率直接平均）；金额类月报＜周报汇总阻断提交，率类偏差＞±5% 仅提示核对（V1.1 第 7.1 / 7.3 节、规则 13/18）。</div>' +
+      '<div class="dsc-field-tip dsc-mt-sm">金额类与月报不符时阻断提交；率类偏差＞±5% 仅提示核对。</div>' +
       '</div></div>';
   }
 
@@ -414,7 +414,7 @@ function renderProgressBoard() {
     '<div class="dsc-page-header">' +
     '  <div><div class="dsc-page-header__title" style="font-size:var(--font-size-lg);">' + esc(t.name) + ' · 报送进度看板</div>' +
     '  <div class="dsc-field-tip">' + esc(t.freq) + ' · ' + esc(t.period) + ' · 截止 ' + esc(t.deadline) +
-    (t.status === '进行中' ? '（剩 ' + dl + ' 天，系统于截止前 1 天自动催办未提交主体）' : '') +
+    (t.status === '进行中' ? '（剩 ' + dl + ' 天）' : '') +
     ' · 下发时间 ' + esc(t.publishTime || '—') + '</div></div>' +
     '  <div class="dsc-page-header__actions">' +
     '    <button class="dsc-btn dsc-btn--default" onclick="backToTaskList()">← 返回任务列表</button>' +
@@ -448,16 +448,16 @@ function renderProgressBoard() {
     '    <span class="dsc-matrix__legend-item"><span class="dsc-matrix__legend-dot" style="background:#FFF7E6;border:1px solid #FFD591;"></span>已退回</span>' +
     '    <span class="dsc-matrix__legend-item"><span class="dsc-matrix__legend-dot" style="background:#F6FFED;border:1px solid #B7EB8F;"></span>已通过</span>' +
     '    <span class="dsc-matrix__legend-item"><span class="dsc-matrix__legend-dot" style="background:#FFF1F0;border:1px solid #FFA39E;"></span>已逾期</span>' +
-    '    <span style="color:var(--color-text-tertiary);">点击状态格查看主体×数据集详情；"登记原因"记录逾期未报送原因</span>' +
+    '    <span style="color:var(--color-text-tertiary);">点击状态格查看主体×数据集详情</span>' +
     '  </div>' +
     '</div></div>' + w6Card;
 }
 
-/* 登记未报送原因（V1.1 010：逾期主体填写未报送原因） */
+/* 登记未报送原因 */
 function openReasonModal(subjectId, ds) {
   const rec = (taskSource(getTask()).store[subjectId] || {})[ds] || {};
   openModal('登记未报送原因 · ' + subjectName(subjectId),
-    '<div class="dsc-alert dsc-alert--warning">该主体 ' + ds + ' ' + esc(dsMeta(ds).name) + ' 已逾期未报送，请登记原因（将计入报送情况统计并留痕）。</div>' +
+    '<div class="dsc-alert dsc-alert--warning">该主体 ' + ds + ' ' + esc(dsMeta(ds).name) + ' 已逾期未报送，请登记原因。</div>' +
     '<div class="dsc-form-group dsc-mt-md"><label class="dsc-form-label dsc-form-label--required">未报送原因</label>' +
     '<textarea class="dsc-textarea" id="reasonText" rows="3" placeholder="如：总结未报送 / 数据未汇总完成 / 人员变动交接中">' + esc(rec.reason || '') + '</textarea></div>',
     '<button class="dsc-btn dsc-btn--default" onclick="closeModal()">取消</button>' +
@@ -530,9 +530,9 @@ function openUnitDatasetModal(subjectId, ds) {
   openModal(subjectName(subjectId) + ' · ' + ds + ' ' + esc(dsMeta(ds).name),
     '<div class="dsc-kv" style="margin-bottom:var(--space-md);">' + info.join('') + '</div>' +
     (rec && rec.rejectReason
-      ? '<div class="dsc-alert dsc-alert--warning">退回原因（必填，已留痕）：<br>' + esc(rec.rejectReason) + '</div>'
+      ? '<div class="dsc-alert dsc-alert--warning">退回原因：<br>' + esc(rec.rejectReason) + '</div>'
       : '') +
     (st === '未开始'
-      ? '<div class="dsc-field-tip">提示：该主体尚未开始填报此数据集，可发送催办。</div>' : ''),
+      ? '' : ''),
     actions);
 }

@@ -28,7 +28,7 @@ const OPTIONAL_COLS = {
   W5: ['spec', 'newPrice', 'note'],
   W6: ['laborPurchase', 'riskType', 'riskLevel', 'strategy', 'owner', 'address', 'materialPurchase', 'riskDesc', 'estLoss', 'resolveTime']
 };
-/* 日期格式校验列（V-F02） */
+/* 日期格式校验列 */
 const DATE_KEYS = {
   D4: ['workStart', 'joinStart', 'dutyStart'], D5: ['inTime'], D6: ['banStart'],
   W3: ['bidStartTime', 'bidEndTime'], W4: ['inTime'], W5: ['transferTime'], W6: ['resolveTime']
@@ -65,7 +65,7 @@ function currentFillRec() {
   if (FillState.freq === '周报') return getWeekly(FillState.subjectId, FillState.dataset);
   return getFill(FILL_TASK, FillState.subjectId, FillState.dataset);
 }
-/* 月报某主体当月是否有已提交周报（A13 缺失兜底） */
+/* 月报某主体当月是否有已提交周报 */
 function isWeeklyMissing() {
   return FillState.freq === '月报' && WEEKLY_MISSING_UNITS.indexOf(FillState.subjectId) >= 0;
 }
@@ -184,7 +184,7 @@ function renderDatasetContent() {
     return '<div class="dsc-card"><div class="dsc-card__body"><div class="dsc-empty">' +
       '<div class="dsc-empty__icon">ℹ️</div>' +
       '<div class="dsc-empty__text">' + esc(meta.name) + '：由' + esc(meta.subject || '对应主体') + '填报，当前主体不适用</div>' +
-      '<div class="dsc-field-tip dsc-mt-sm">切换上方「填报主体」或页签查看其他数据集</div></div></div></div>';
+      '</div></div></div>';
   }
 
   const showBanner = {
@@ -196,26 +196,26 @@ function renderDatasetContent() {
   /* A13 缺失兜底提示 */
   const missingBanner = (FillState.freq === '月报' && !locked && isWeeklyMissing())
     ? '<div class="dsc-alert dsc-alert--warning">未取到本期周报数据（2026年9月第3周）：' + esc(subjectName(FillState.subjectId)) +
-      ' 当月无已提交周报，本数据集转为<b>全部手工填报</b>，不阻断本月报送；汇总报表将标注该单位数据来源（A13 缺失兜底）。</div>' : '';
+      ' 当月无已提交周报，本数据集转为<b>全部手工填报</b>，不阻断本月报送；汇总报表将标注该单位数据来源。</div>' : '';
 
   /* 周月衔接提示（有带出数据时） */
   const fetchBanner = (FillState.freq === '月报' && !locked && !isWeeklyMissing() && hasFetched(ds))
     ? '<div class="dsc-alert dsc-alert--info">本数据集含<b>自动取自周报</b>的字段（置灰显示、标注来源期次）：' + fetchSummaryText(ds) +
-      '。请核对确认；修改须填写原因并留痕（A11/A12）。</div>' : '';
+      '。请核对确认；修改须填写原因并留痕。</div>' : '';
 
-  /* W6 校验基准说明；月报 D1/D2/D3 与周报基准的对应关系（V1.1 7.1 / 7.3） */
+  /* W6 校验基准说明；月报 D1/D2/D3 与周报基准的对应关系 */
   let baselineBanner = '';
   const base = w6Baseline(FillState.subjectId);
   if (ds === 'W6') {
-    baselineBanner = '<div class="dsc-alert dsc-alert--info">W6 为项目级风险全景表：项目行率类由系统计算，<b>按二级单位汇总后作为月报 D1/D2/D3 的一致性校验基准</b>（金额类月报<周报汇总阻断提交；率类偏差>±5% 仅提示核对，PRD 7.3）。</div>';
+    baselineBanner = '<div class="dsc-alert dsc-alert--info">W6 为项目级风险全景表：项目行率类由系统计算，<b>按二级单位汇总后作为月报 D1/D2/D3 的一致性校验基准</b>（金额类月报<周报汇总阻断提交；率类偏差>±5% 仅提示核对）。</div>';
   } else if (FillState.freq === '月报' && (ds === 'D1' || ds === 'D2' || ds === 'D3') && !locked && !isWeeklyMissing()) {
     const scope = ds === 'D1' ? '采购金额类（物资设备 / 劳务与专业分包）、综合采购成本降低率与综合采购效益率'
       : (ds === 'D2' ? '钢筋 / 混凝土损耗率基数（图纸量须与 D3 保持同口径）' : '钢筋 / 混凝土损耗率（率类互校，仅提示核对）');
     baselineBanner = '<div class="dsc-alert dsc-alert--info">一致性校验基准：' + scope +
-      '将与 <b>W6 项目风险全景表按单位汇总值</b>比对（' + esc((base || {}).note || '当月无周报基准，转手工填报（A13）') + '）。</div>';
+      '将与 <b>W6 项目风险全景表按单位汇总值</b>比对（' + esc((base || {}).note || '当月无周报基准，转手工填报') + '）。</div>';
   }
 
-  /* 勾稽尾差放行状态（V-G02，业务规则 4/20） */
+  /* 勾稽尾差放行状态 */
   const waiver = rec && rec.varianceWaiver;
   const waiverBanner = !waiver ? '' :
     '<div class="dsc-alert dsc-alert--warning">勾稽尾差放行（规则 ' + esc((waiver.rules || []).join('、')) + '）：' + esc(waiver.reason) +
@@ -257,7 +257,7 @@ function renderDatasetContent() {
   const body = zero
     ? '<div class="dsc-zero-report"><div class="dsc-empty__icon" style="font-size:32px;">∅</div>' +
       '<div><div style="font-weight:var(--font-weight-medium);">本期无数据</div>' +
-      '<div class="dsc-field-tip">该数据集本期无业务，将以零报告形式提交并计入齐套统计（验收标准 A9）。直接点击「提交」完成零报告。</div></div></div>'
+      '<div class="dsc-field-tip">该数据集本期无业务，将以零报告形式提交并计入齐套统计。</div></div></div>'
     : (meta.mode === 'form' ? renderFormDataset(ds, locked) : renderRowsDataset(ds, locked));
 
   return validatePanel + missingBanner + fetchBanner + baselineBanner + waiverBanner + showBanner +
@@ -316,9 +316,9 @@ function saveDraft() {
 }
 
 /* ============================================================
-   周月衔接：覆盖带出值（A12）
+   周月衔接：覆盖带出值
    ============================================================ */
-/* 覆盖权限（A12：有权限 + 填写原因才可改，无权限不可改；含组织/角色隔离）
+/* 覆盖权限
    填报人（本单位）与局报送管理员可覆盖；审核人/复核人/查看者/系统管理员无权修改填报数据。 */
 const OVERRIDE_ROLES = ['filler', 'admin'];
 function canOverrideFetched() { return OVERRIDE_ROLES.indexOf(AppState.role.id) >= 0; }
@@ -339,7 +339,7 @@ function openOverrideModal(ds, fieldKey, label) {
   if (!canOverrideFetched()) { denyOverride('覆盖自动带出值 · ' + ds + ' ' + label); return; }
   const info = fetchedInfo(ds, fieldKey);
   openModal('修改自动带出值（覆盖留痕）',
-    '<div class="dsc-alert dsc-alert--warning">该字段为<b>自动取自周报</b>（' + esc(((FETCH_SOURCES.map[ds] || {})[fieldKey] || {}).desc || (FETCH_SOURCES.map[ds][fieldKey] || {}).from || '') + '），修改须具备权限并填写原因，全程留痕（A12）。</div>' +
+    '<div class="dsc-alert dsc-alert--warning">该字段为<b>自动取自周报</b>（' + esc(((FETCH_SOURCES.map[ds] || {})[fieldKey] || {}).desc || (FETCH_SOURCES.map[ds][fieldKey] || {}).from || '') + '），修改须具备权限并填写原因，全程留痕。</div>' +
     '<div class="dsc-kv dsc-mt-md" style="grid-template-columns:repeat(2,1fr);">' +
     '<div class="dsc-kv__item"><div class="dsc-kv__label">字段</div><div class="dsc-kv__value">' + esc(label) + '</div></div>' +
     '<div class="dsc-kv__item"><div class="dsc-kv__label">带出值（来源：' + esc(info.source || FETCH_SOURCES.weekLabel) + '）</div><div class="dsc-kv__value">' + fmtMoney(info.value) + '</div></div>' +
@@ -350,12 +350,12 @@ function openOverrideModal(ds, fieldKey, label) {
     '<div class="dsc-form-group"><label class="dsc-form-label dsc-form-label--required">修改原因</label>' +
     '<input class="dsc-input" id="ovReason" placeholder="如：周报集采金额口径与月报月度归属差异"></div>' +
     '</div>' +
-    '<div class="dsc-field-tip">覆盖记录 100% 可查：操作人、时间、原值、原因（A12）；可覆盖指标清单待业务确认（Q7）。</div>',
+    '<div class="dsc-field-tip">覆盖记录 100% 可查：操作人、时间、原值、原因。</div>',
     '<button class="dsc-btn dsc-btn--default" onclick="closeModal()">取消</button>' +
     '<button class="dsc-btn dsc-btn--primary" onclick="doOverride(\'' + ds + '\',\'' + fieldKey + '\')">确认覆盖并留痕</button>');
 }
 function doOverride(ds, fieldKey) {
-  /* 提交前二次权限校验（A12：无权限不可改） */
+  /* 提交前二次权限校验 */
   if (!canOverrideFetched()) { closeModal(); denyOverride('覆盖自动带出值 · ' + ds + ' ' + fieldKey); return; }
   const val = document.getElementById('ovValue').value.trim();
   const reason = document.getElementById('ovReason').value.trim();
@@ -368,7 +368,7 @@ function doOverride(ds, fieldKey) {
     time: '2026-09-14 ' + new Date().getHours() + ':' + String(new Date().getMinutes()).padStart(2, '0')
   };
   closeModal();
-  toast('已覆盖自动带出值并留痕：操作人、时间、原值、原因已记录（A12）', 'success');
+  toast('已覆盖自动带出值并留痕：操作人、时间、原值、原因已记录', 'success');
   renderPage('my-fill');
 }
 
@@ -417,7 +417,7 @@ function renderFormDataset(ds, locked) {
     '<input class="dsc-input" value="' + esc(reporter) + '" ' + (locked ? 'disabled' : '') + '></div>' +
     '<div class="dsc-form-group"><label class="dsc-form-label">备注</label>' +
     '<input class="dsc-input" placeholder="口径特殊说明" ' + (locked ? 'disabled' : '') + '></div></div>' +
-    '<div class="dsc-field-tip dsc-mt-sm">金额单位：元，保留 2 位小数；数量保留 3 位小数；率类字段系统计算，分母为 0 时显示"/"（V-T01 容错）。</div>';
+    '<div class="dsc-field-tip dsc-mt-sm">金额单位：元，保留 2 位小数；数量保留 3 位小数；率类字段系统计算，分母为 0 时显示"/"。</div>';
 }
 
 /* 自动取自周报的字段（置灰 + 来源标注 + 覆盖入口，A11/A12/A14） */
@@ -487,7 +487,7 @@ function renderRowsDataset(ds, locked) {
   const showCols = ROWS_TABLE_COLS[ds];
   const isMonthly = FillState.freq === '月报';
 
-  /* 查重提示（V-C03：录入即黄色提示阻断；跨单位重复为提示不阻断） */
+  /* 查重提示 */
   const dupMap = {};
   rows.forEach(r => {
     if (ds === 'D5' || ds === 'D6') {
@@ -537,7 +537,7 @@ function renderRowsDataset(ds, locked) {
     });
   }
 
-  /* 带出字段提示条（A14：无手工录入入口） */
+  /* 带出字段提示条 */
   let fetchedTip = '';
   const fetchedCols = cols.filter(c => c.fetched);
   if (fetchedCols.length) {
@@ -545,7 +545,7 @@ function renderRowsDataset(ds, locked) {
     fetchedCols.forEach(c => { froms[c.fetched] = (froms[c.fetched] || 0) + 1; });
     fetchedTip = '<div class="dsc-dup-tip" style="background:var(--color-primary-bg);border-color:#91D5FF;color:var(--color-primary);">' +
       '本数据集 ' + fetchedCols.length + ' 项字段自动取自周报（' + Object.keys(froms).map(f => f + ' ' + dsMeta(f).name).join('、') + '，' + FETCH_SOURCES.weekLabel + '）：' +
-      '置灰显示、无手工录入入口，修改须走覆盖留痕（A14）。' +
+      '置灰显示、无手工录入入口，修改须走覆盖留痕。' +
       (FETCH_SOURCES.manual[ds] ? ' 另行补填 ' + FETCH_SOURCES.manual[ds].length + ' 项：' + FETCH_SOURCES.manual[ds].map(k => (cols.find(c => c.key === k) || {}).label).join('、') + '。' : '') +
       (isWeeklyMissing() ? ' <b>本期未取到周报数据，已转手工填报。</b>' : '') + '</div>';
   }
@@ -574,7 +574,7 @@ function renderRowsDataset(ds, locked) {
       return '<td' + dupStyle + ' class="' + (c.calc ? 'dsc-text-secondary' : '') + '">' + v + '</td>';
     }).join('');
     const crossCell = ds === 'D6' && d5Names[r.id]
-      ? '<tr><td colspan="' + (showCols.length + 1) + '" style="padding:0;"><div class="dsc-dup-tip" style="margin:0 0 6px;">⚠ 关联警示（V-C03 交叉）：该供应商同时存在于 D5 合格库有效记录中，同一供应商不得同时存在于合格库与不合格库，提交将被阻断。</div></td></tr>'
+      ? '<tr><td colspan="' + (showCols.length + 1) + '" style="padding:0;"><div class="dsc-dup-tip" style="margin:0 0 6px;">⚠ 关联警示：该供应商同时存在于 D5 合格库有效记录中，同一供应商不得同时存在于合格库与不合格库，提交将被阻断。</div></td></tr>'
       : '';
     return '<tr data-row="' + r.id + '">' + tds +
       '<td class="dsc-table__actions">' +
@@ -609,7 +609,7 @@ function openRowEditor(rowId) {
     if (c.check) {
       return '<div class="dsc-form-group"><label class="dsc-check"><input type="checkbox" id="ef_' + c.key + '"' + (row[c.key] ? ' checked' : '') + '><span class="dsc-check__box"></span>' + esc(c.label) + '</label></div>';
     }
-    /* 自动取自周报的字段：无手工录入入口（A14），仅展示 + 覆盖说明 */
+    /* 自动取自周报的字段：无手工录入入口，仅展示 + 覆盖说明 */
     if (c.fetched && !weeklyMissing) {
       const badge = '<span class="dsc-badge-fetched dsc-badge-fetched--sm">自动取自 ' + esc(c.fetched) + '</span>';
       const val = (c.multi) ? (row[c.key] || []).join('、') : (row[c.key] === undefined || row[c.key] === '' ? '/' : row[c.key]);
@@ -639,10 +639,10 @@ function openRowEditor(rowId) {
 
   openModal((rowId ? '编辑' : '新增') + '明细行 · ' + ds + ' ' + esc(dsMeta(ds).name),
     (cols.some(c => c.fetched) && !weeklyMissing
-      ? '<div class="dsc-alert dsc-alert--info dsc-mb-md">本数据集含自动取自周报的字段（置灰、无手工录入入口，A14）；如需修改请使用「覆盖留痕」。</div>' : '') +
+      ? '<div class="dsc-alert dsc-alert--info dsc-mb-md">本数据集含自动取自周报的字段（置灰、无手工录入入口）；如需修改请使用「覆盖留痕」。</div>' : '') +
     '<div class="dsc-form-row dsc-form-row--2">' + fieldHTML + '</div>' +
-    (ds === 'D4' ? '<div class="dsc-field-tip">三个工作年限由起始时间至报送截止日自动计算取整（V-G06），无需填报。</div>' : '') +
-    (ds === 'D6' ? '<div class="dsc-field-tip">禁用到期日由系统按"起始时间+期限"自动计算；同一供应商不得同时存在于合格库（V-C03 交叉校验）。</div>' : ''),
+    (ds === 'D4' ? '<div class="dsc-field-tip">三个工作年限由起始时间至报送截止日自动计算取整，无需填报。</div>' : '') +
+    (ds === 'D6' ? '<div class="dsc-field-tip">禁用到期日由系统按"起始时间+期限"自动计算；同一供应商不得同时存在于合格库。</div>' : ''),
     '<button class="dsc-btn dsc-btn--default" onclick="closeModal()">取消</button>' +
     '<button class="dsc-btn dsc-btn--primary" onclick="saveRow(\'' + ds + '\',\'' + (rowId || '') + '\',\'' + row.id + '\')">保存</button>');
 }
@@ -657,7 +657,7 @@ function saveRow(ds, rowId, newId) {
       const el = document.getElementById('ef_' + c.key);
       if (el) row[c.key] = el.checked;
     } else if (c.edit) {
-      /* 带出字段：无手工录入入口，保持原值（A14） */
+      /* 带出字段：无手工录入入口，保持原值 */
       if (c.fetched && !weeklyMissing) return;
       if (c.multi) {
         row[c.key] = Array.from(document.querySelectorAll('.efm_' + c.key + ':checked')).map(x => x.value);
@@ -701,7 +701,7 @@ function openImportModal() {
     '<div class="dsc-alert dsc-alert--info">导入策略：先校验后入库。默认"整批不入库"（可配置为仅导入通过行）。失败行可导出修正后重新上传，校验响应 ≤30 秒/万行。</div>' +
     '<div class="dsc-form-group dsc-mt-md"><label class="dsc-form-label dsc-form-label--required">上传文件（.xlsx）</label>' +
     '<input class="dsc-input" type="file" accept=".xlsx" disabled placeholder="演示原型：文件上传已禁用，点击下方按钮模拟导入">' +
-    '<div class="dsc-field-tip">模板由指标字典自动生成，列头与线上字段、校验规则强一致（A10 口径可配置）</div></div>' +
+    '</div>' +
     '<div id="importResult"></div>';
   openModal('批量导入 · ' + ds + ' ' + esc(dsMeta(ds).name), body,
     '<button class="dsc-btn dsc-btn--default" onclick="closeModal()">取消</button>' +
@@ -736,14 +736,14 @@ function simulateImport() {
     '<table class="dsc-table dsc-mt-sm"><thead><tr><th>失败行号</th><th>规则</th><th>失败原因</th></tr></thead><tbody>' +
     allFails.map(f => '<tr><td>' + (typeof f.row === 'number' ? '第 ' + f.row + ' 行' : f.row) + '</td><td><span class="dsc-tag dsc-tag--danger">' + f.rule + '</span></td><td>' + esc(f.msg) + '</td></tr>').join('') +
     '</tbody></table>' +
-    (calcFails.length ? '<div class="dsc-alert dsc-alert--info dsc-mt-sm">勾稽差异处理：修正数据，或在提交被阻断时点击「申请尾差放行」提交差异原因，由复核环节书面确认放行（业务规则 4/20）。</div>' : '') +
+    (calcFails.length ? '<div class="dsc-alert dsc-alert--info dsc-mt-sm">勾稽差异处理：修正数据，或在提交被阻断时点击「申请尾差放行」提交差异原因，由复核环节书面确认放行。</div>' : '') +
     '<div class="dsc-mt-md"><button class="dsc-btn dsc-btn--default dsc-btn--sm" onclick="toast(\'失败行已导出为 Excel，修正后可重新上传\',\'success\')">导出失败行修正</button>' +
     '<button class="dsc-btn dsc-btn--default dsc-btn--sm" onclick="toast(\'已按配置切换为：仅导入通过校验的行\',\'warning\')">切换：仅导入通过行</button></div>';
   toast('导入校验完成：' + (20 - fails.length) + ' 通过 / ' + fails.length + ' 失败' + (calcFails.length ? '（含 ' + calcFails.length + ' 处勾稽差异）' : ''), 'warning');
 }
 
 /* ============================================================
-   提交与校验（ZY-HY-TB-030 + 070 一致性校验）
+   提交与校验
    顺序：格式(V-F) → 枚举(V-E) → 查重(V-C) → 勾稽(V-G)/一致性(V-G07/08)；V-T 容错不算失败
    ============================================================ */
 function submitFill() {
@@ -751,7 +751,7 @@ function submitFill() {
   const rec = currentFillRec();
   if (rec.zero) {
     openModal('零报告提交确认',
-      '<div class="dsc-alert dsc-alert--info">确认以「本期无数据」零报告形式提交 ' + ds + ' ' + esc(dsMeta(ds).name) + '？零报告计入齐套统计（A9）。</div>',
+      '<div class="dsc-alert dsc-alert--info">确认以「本期无数据」零报告形式提交 ' + ds + ' ' + esc(dsMeta(ds).name) + '？零报告计入齐套统计。</div>',
       '<button class="dsc-btn dsc-btn--default" onclick="closeModal()">取消</button>' +
       '<button class="dsc-btn dsc-btn--primary" onclick="doSubmitFill()">确认提交</button>');
     return;
@@ -765,7 +765,7 @@ function submitFill() {
   }
   const warnHTML = result.warnings.length
     ? '<div class="dsc-validate-panel dsc-validate-panel--warn dsc-mt-md"><div class="dsc-validate-panel__head"><span class="dsc-tag dsc-tag--warning">提示核对</span>' +
-      result.warnings.length + ' 项偏差提示（不阻断提交，A13）</div><ul class="dsc-validate-list">' +
+      result.warnings.length + ' 项偏差提示（不阻断提交）</div><ul class="dsc-validate-list">' +
       result.warnings.map(w => '<li class="dsc-validate-item dsc-validate-item--warn"><span class="dsc-validate-item__rule dsc-validate-item__rule--warn">' + esc(w.rule) + '</span><div><span class="dsc-validate-item__loc">' + esc(w.loc) + '</span> ' + esc(w.msg) + '</div></li>').join('') +
       '</ul></div>'
     : '<div class="dsc-alert dsc-alert--success dsc-mt-md">四级校验（格式 → 枚举 → 查重 → 勾稽/一致性）共 ' + result.total + ' 条规则全部通过。</div>';
@@ -782,7 +782,7 @@ function doSubmitFill() {
   FillState.validateResult = null;
   closeModal();
   if (FillState.freq === '月报') {
-    toast('提交成功：校验全部通过，① 已流转至单位审核；② 带出字段与周报源数据一致率 100%（A11）', 'success');
+    toast('提交成功：校验全部通过，① 已流转至单位审核；② 带出字段与周报源数据一致率 100%', 'success');
   } else {
     toast('周报提交成功：本数据按周留档，成为当月月报取数来源', 'success');
   }
@@ -809,7 +809,7 @@ function validateForm(ds) {
   /* V-G01~V-G06 勾稽校验（含导入携带计算列与系统重算值比对） */
   const merged = resolveValues(ds, values);
   validateCalcRules(ds, merged, warnings).forEach(e => errors.push(e));
-  /* 周月一致性校验（A13 / PRD 7.3）：仅月报 */
+  /* 周月一致性校验：仅月报 */
   const cons = validateConsistency(ds, merged);
   return { errors: errors.concat(cons.errors), warnings: cons.warnings, total: 22 };
 }
@@ -837,7 +837,7 @@ function checkUniqueRecord(ds) {
 const CALC_RULES = [
   { rule: 'V-G01', ds: 'D1', name: '采购汇总勾稽', expr: '采购总金额 = 物资设备采购总金额 + 劳务与专业分包采购总金额' },
   { rule: 'V-G02', ds: 'D1', name: '效益额/降低额勾稽', expr: '效益额 = 对应业主收入 − 采购总金额；降低额 = 标准成本 − 采购总金额' },
-  { rule: 'V-G03', ds: 'D1', name: '率类勾稽', expr: '效益率 = 效益额 ÷ 对应业主收入；分母为 0 显示"/"（V-T01）' },
+  { rule: 'V-G03', ds: 'D1', name: '率类勾稽', expr: '效益率 = 效益额 ÷ 对应业主收入；分母为 0 显示"/"' },
   { rule: 'V-G04', ds: 'D2', name: '结余/节超勾稽', expr: '结余率 =（图纸同口径用量 − 图纸计算量）÷ 图纸计算量；节超量 = 图纸量 − 同口径用量；钢筋同口径用量按（实际用量 − 措施用量 − 临建用量）口径核对（需填报字段，偏差仅提示）' },
   { rule: 'V-G05', ds: 'D3', name: '损耗率/周转率勾稽', expr: '损耗率 =（实际用量 − 图纸净用量）÷ 图纸净用量；周转率 = 调出资产原值 ÷ 项目资产原值' },
   { rule: 'V-G06', ds: 'D4', name: '工作年限勾稽', expr: '工作年限 = 起始时间至报送截止日自动取整（导入携带值须与重算值一致）' }
@@ -849,7 +849,7 @@ function validateCalcRules(ds, values, warnings) {
   const warn = warnings || [];
   const rec = currentFillRec();
   if (!rec || !CALC_RULES.some(r => r.ds === ds)) return errors;
-  /* 已申请尾差放行 → 提交放行，待复核环节书面确认（业务规则 4/20） */
+  /* 已申请尾差放行 → 提交放行，待复核环节书面确认 */
   if (rec.varianceWaiver && rec.varianceWaiver.applied) return errors;
   /* V-G04 口径核对：D2 钢筋同口径用量为「需填报」字段（裁定④），系统按口径参考值核对，偏差仅提示不阻断 */
   if (ds === 'D2' && values && values.gj_tkL !== undefined && values.gj_tkL !== '' && !isNaN(Number(values.gj_tkL))) {
@@ -942,14 +942,14 @@ function validateConsistency(ds, values) {
     checks.push({ key: 'sum_benefit_rate', label: '综合采购效益率（月报重算）', mv: parseRateVal(c1.sum_benefit_rate), wv: base.benefitRate, kind: 'rate' });
   }
   if (ds === 'D3' && values) {
-    /* V1.1 扩展：D3 损耗率与 W6 汇总损耗率互为校验基准（PRD 7.2：W6 汇总损耗率作一致性校验基准） */
+    /* V1.1 扩展：D3 损耗率与 W6 汇总损耗率互为校验基准 */
     const c3 = calcD3(values);
     checks.push({ key: 'gj_shl', label: '钢筋损耗率（月报重算）', mv: parseRateVal(c3.gj_shl), wv: base.gjLossRate, kind: 'rate' });
     checks.push({ key: 'hnt_shl', label: '混凝土损耗率（月报重算）', mv: parseRateVal(c3.hnt_shl), wv: base.hntLossRate, kind: 'rate' });
   }
   if (ds === 'D2' && values) {
     /* D2 率类为系统按填报基数计算，不设数值比对；但图纸量基数为 D3 损耗率的分母，
-       按「同一指标全系统一处填报、各处仅引用」须与 D3 完全一致（PRD 7.2 D2 行 / 规则 13）。 */
+       按「同一指标全系统一处填报、各处仅引用」须与 D3 完全一致。 */
     const d3 = getFill(FILL_TASK, uid, 'D3');
     const d3v = (d3 && d3.values) || {};
     [
@@ -990,7 +990,7 @@ function validateConsistency(ds, values) {
         warnings.push({
           rule: 'V-G08', loc: c.label,
           msg: '月报重算值 ' + c.mv.toFixed(2) + '% 与 W6 汇总基准 ' + c.wv.toFixed(2) + '% 偏差 ' + (dev * 100).toFixed(1) +
-            '%（阈值 ±' + (CONSISTENCY_CONFIG.deviationWarn * 100) + '%），率类仅提示核对、不阻断提交（PRD 7.3）',
+            '%（阈值 ±' + (CONSISTENCY_CONFIG.deviationWarn * 100) + '%），率类仅提示核对、不阻断提交',
           fixFn: 'openConsistencyExplain(\'' + c.key + '\',\'' + ds + '\',\'' + c.label + '\')', fixLabel: '说明差异'
         });
       }
@@ -1007,16 +1007,16 @@ function openConsistencyExplain(key, ds, label) {
   const baseText = (bv === null || bv === undefined) ? '—' : (isRate ? Number(bv).toFixed(2) + '%' : fmtMoney(bv));
   openModal('周月一致性差异说明（留痕）',
     '<div class="dsc-alert dsc-alert--warning">' + (isRate
-      ? '率类指标由系统按月报填报数据重算，与 W6 汇总基准偏差 >±5% 时<b>提示核对</b>（不阻断提交，PRD 7.3）；填写差异说明留痕后消除该提示，记录写入审计轨迹（业务规则 11、A13）。'
-      : '金额类指标月报值小于周报汇总值触发<b>阻断</b>；确因统计口径/时点差异，可填写差异说明后放行，记录将写入审计轨迹（业务规则 11、A13）。') + '</div>' +
+      ? '率类指标由系统按月报填报数据重算，与 W6 汇总基准偏差 >±5% 时<b>提示核对</b>（不阻断提交）；填写差异说明留痕后消除该提示，记录写入审计轨迹。'
+      : '金额类指标月报值小于周报汇总值触发<b>阻断</b>；确因统计口径/时点差异，可填写差异说明后放行，记录将写入审计轨迹。') + '</div>' +
     '<div class="dsc-kv dsc-mt-md" style="grid-template-columns:repeat(2,1fr);">' +
     '<div class="dsc-kv__item"><div class="dsc-kv__label">字段</div><div class="dsc-kv__value">' + esc(label) + '</div></div>' +
     '<div class="dsc-kv__item"><div class="dsc-kv__label">周报汇总基准</div><div class="dsc-kv__value">' + baseText + '</div></div>' +
-    '<div class="dsc-kv__item" style="grid-column:span 2;"><div class="dsc-kv__label">基准来源</div><div class="dsc-kv__value" style="font-size:var(--font-size-sm);">' + esc(base ? base.note : '当月无周报基准（A13 缺失兜底：转手工填报）') + '</div></div>' +
+    '<div class="dsc-kv__item" style="grid-column:span 2;"><div class="dsc-kv__label">基准来源</div><div class="dsc-kv__value" style="font-size:var(--font-size-sm);">' + esc(base ? base.note : '当月无周报基准') + '</div></div>' +
     '</div>' +
     '<div class="dsc-form-group dsc-mt-md"><label class="dsc-form-label dsc-form-label--required">差异说明（必填）</label>' +
     '<textarea class="dsc-textarea" id="consReason" rows="3" placeholder="如：周报按付款进度统计、月报按权责发生制确认，差额为跨月结算部分"></textarea></div>' +
-    '<div class="dsc-field-tip">说明经留痕后本次提交放行；同类差异建议在报表口径中明确（Q9）。</div>',
+    '<div class="dsc-field-tip">说明经留痕后本次提交放行。</div>',
     '<button class="dsc-btn dsc-btn--default" onclick="closeModal()">取消</button>' +
     '<button class="dsc-btn dsc-btn--primary" onclick="doConsistencyExplain(\'' + key + '\')">提交说明并放行</button>');
 }
@@ -1031,18 +1031,18 @@ function doConsistencyExplain(key) {
   submitFill();
 }
 
-/* ---------- 尾差放行（V-G02 容差外差异的书面确认流程，业务规则 4/20） ----------
+/* ---------- 尾差放行 ----------
    填报端提交申请并留痕 → 随数据流转至复核环节书面确认放行 → 归档；
    未确认前可撤回申请，撤回后须修正数据或重新申请。 */
 function openTailWaiverModal(ds) {
   const rec = currentFillRec();
   const w = rec.varianceWaiver;
-  openModal('申请尾差放行（V-G02）',
-    '<div class="dsc-alert dsc-alert--warning">导入携带的计算值与系统重算值偏差超出容差（金额 ±1 元 / 率类 ±0.01 个百分点）。按业务规则 4/20，勾稽差异须由复核环节<b>书面确认放行</b>并留痕；本申请将随提交流转至审核/复核，未确认前数据状态标注「尾差放行待复核确认」。</div>' +
+  openModal('申请尾差放行',
+    '<div class="dsc-alert dsc-alert--warning">导入携带的计算值与系统重算值偏差超出容差（金额 ±1 元 / 率类 ±0.01 个百分点）。勾稽差异须由复核环节<b>书面确认放行</b>并留痕；本申请将随提交流转至审核/复核，未确认前数据状态标注「尾差放行待复核确认」。</div>' +
     (w && w.applied ? '<div class="dsc-alert dsc-alert--info dsc-mt-sm">已提交申请：' + esc(w.reason) + '（' + esc(w.by) + ' · ' + esc(w.time) + '）</div>' : '') +
     '<div class="dsc-form-group dsc-mt-md"><label class="dsc-form-label dsc-form-label--required">差异原因（必填）</label>' +
     '<textarea class="dsc-textarea" id="twReason" rows="3" placeholder="如：线下月报按四舍五入取整至元，系统按分录明细重算，差异 +2.40 元"></textarea></div>' +
-    '<div class="dsc-field-tip">放行范围仅限本次勾稽尾差（规则 ' + CALC_RULES.filter(r => r.ds === ds).map(r => r.rule).join('、') + '），不影响其他校验规则。</div>',
+    '<div class="dsc-field-tip">放行范围仅限本次勾稽尾差（规则 ' + CALC_RULES.filter(r => r.ds === ds).map(r => r.rule).join('、') + '）。</div>',
     '<button class="dsc-btn dsc-btn--default" onclick="closeModal()">取消</button>' +
     '<button class="dsc-btn dsc-btn--primary" onclick="doTailWaiver(\'' + ds + '\')">提交尾差放行申请</button>');
 }

@@ -29,15 +29,15 @@ const ROLES = [
 /* ---------- 侧边栏子菜单定义（全量展示，不随视角变化） ---------- */
 const HYTB_MENUS = [
   { key: 'task-manage', name: '报送任务管理',  breadcrumb: '报送任务管理',  icon: 'task',
-    desc: '任务创建下发、六状态进度看板、在线催办（ZY-HY-TB-010）' },
+    desc: '任务创建下发、六状态进度看板、在线催办' },
   { key: 'my-fill',     name: '数据填报',     breadcrumb: '数据填报',      icon: 'fill',
-    desc: '六类数据集在线填报、批量导入、草稿暂存（ZY-HY-TB-020）' },
+    desc: '六类数据集在线填报、批量导入、草稿暂存' },
   { key: 'review',      name: '审核与退回',   breadcrumb: '审核与退回',    icon: 'review',
-    desc: '单位审核、局级复核、退回留痕、审计轨迹（ZY-HY-TB-040）' },
+    desc: '单位审核、局级复核、退回留痕、审计轨迹' },
   { key: 'summary',     name: '汇总统计与报表', breadcrumb: '汇总统计与报表', icon: 'summary',
-    desc: '自动汇总、率类重算、分供商去重、报表导出（ZY-HY-TB-050）' },
+    desc: '自动汇总、率类重算、分供商去重、报表导出' },
   { key: 'config',      name: '填报基础配置',  breadcrumb: '填报基础配置',  icon: 'config',
-    desc: '指标字典、枚举字典、期间与单位配置（ZY-HY-TB-060）' }
+    desc: '指标字典、枚举字典、期间与单位配置' }
 ];
 
 /* ---------- 二级单位（14 家，SRS 1.3） ---------- */
@@ -127,7 +127,7 @@ const TASKS = [
     year: 2026, period: '2026年9月第2周', deadline: '2026-09-11',
     scope: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6'], unitScope: '各共享中心、区域总部、二级单位（项目）',
     createdBy: '王建国', createdAt: '2026-09-05 09:00', publishTime: '2026-09-05 09:00',
-    desc: '当周周报全部主体已提交并归档，作为 9 月月报取数来源之一（默认取当月最后一个已提交周报，Q6）。'
+    desc: '当周周报全部主体已提交并归档，作为 9 月月报取数来源之一（默认取当月最后一个已提交周报）。'
   },
   {
     id: 'T-2026W36', name: '2026年9月第1周周报', status: '已关闭', freq: '周报',
@@ -696,7 +696,7 @@ const W3_COLUMNS = [
   { key: 'coverProj', label: '覆盖项目', edit: true },
   { key: 'amount', label: '金额（元）', edit: true, tip: '自动带出至月报 D1 集采引用金额' },
   { key: 'saveAmount', label: '预计集采降本额（元）', edit: true },
-  { key: 'bidStartTime', label: '招采发起时间', edit: true, tip: 'yyyy/MM/dd（PRD 7.1 W3 字段级结构补齐）' },
+  { key: 'bidStartTime', label: '招采发起时间', edit: true, tip: 'yyyy/MM/dd' },
   { key: 'bidEndTime', label: '预计完成时间', edit: true, tip: 'yyyy/MM/dd' },
   { key: 'stage', label: '当前阶段', edit: true, enum: ['需求汇总', '招标文件编制', '发标', '评标', '定标', '合同签订', '执行中'] },
   { key: 'progress', label: '本周进展', edit: true },
@@ -782,7 +782,7 @@ const W6_COLUMNS = [
   { key: 'contractAmount', label: '合同额（元）', edit: true },
   { key: 'output', label: '自施产值（元）', edit: true },
   { key: 'purchaseTotal', label: '采购总额（元）', edit: true, tip: '月报 D1 采购金额类一致性校验基准' },
-  { key: 'materialPurchase', label: '其中：物资设备采购（元）', edit: true, tip: '采购总额中的物资设备分项（PRD 7.1 W6 字段级结构补齐）' },
+  { key: 'materialPurchase', label: '其中：物资设备采购（元）', edit: true, tip: '采购总额中的物资设备分项' },
   { key: 'laborPurchase', label: '其中：劳务分包采购（元）', edit: true },
   { key: 'reduceRate', label: '综合采购成本降低率', calc: true, formula: '系统计算；按单位汇总后作月报校验基准' },
   { key: 'benefitRate', label: '综合采购效益率', calc: true, formula: '系统计算；按单位汇总后作月报校验基准' },
@@ -1116,12 +1116,12 @@ const ENUM_DICT_CONFIG = [
   { key: 'category', name: '品类', items: ENUMS.category, status: '已启用', note: '取自基础字典，可维护扩展' },
   { key: 'country', name: '可供应国别', items: ENUMS.country, status: '已启用', note: '取自基础字典' },
   { key: 'education', name: '学历', items: ENUMS.education, status: '已启用', note: 'V-E02' },
-  { key: 'post', name: '从事岗位', items: ENUMS.post, status: '待收敛', note: 'Q2：待业务确认"采购物资管理"归类后收敛为两类' },
+  { key: 'post', name: '从事岗位', items: ENUMS.post, status: '待收敛', note: '待业务确认"采购物资管理"归类后收敛为两类' },
   { key: 'sharedCenter', name: '所属共享中心', items: ENUMS.sharedCenter, status: '已启用', note: '按配置开放共享中心字段' },
   { key: 'gender', name: '性别', items: ENUMS.gender, status: '已启用', note: '' },
   /* V1.1 新增（W4 分供方资源库） */
-  { key: 'resourceOrigin', name: '资源所属国别', items: ENUMS.resourceOrigin, status: '已启用', note: 'V1.1 新增：属地/属地中国/中国企业国外办厂/国内产品出口企业' },
-  { key: 'paymentTerm', name: '账期', items: ENUMS.paymentTerm, status: '已启用', note: 'V1.1 新增：W4 填报 → 自动带出至月报 D5' }
+  { key: 'resourceOrigin', name: '资源所属国别', items: ENUMS.resourceOrigin, status: '已启用', note: '新增：属地/属地中国/中国企业国外办厂/国内产品出口企业' },
+  { key: 'paymentTerm', name: '账期', items: ENUMS.paymentTerm, status: '已启用', note: '新增：W4 填报 → 自动带出至月报 D5' }
 ];
 
 /* 期间与频率配置（V1.1 双频：周报每周五 / 月报每月底） */

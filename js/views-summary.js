@@ -54,10 +54,10 @@ function renderSummaryPage() {
     '<div class="dsc-page-header">' +
     '  <div><div class="dsc-page-header__title">汇总统计与报表导出</div>' +
     '  <div class="dsc-field-tip">' + (isWeekly
-      ? '周报周度明细报表区：W1~W6 按周次展示（表样与现行周报一致），含月内周趋势与覆盖范围标注（PRD 6.1 ② / A16）'
+      ? '周报周度明细报表区：W1~W6 按周次展示（表样与现行周报一致），含月内周趋势与覆盖范围标注'
       : isCompare
-      ? '周报（周维度）与月报（月维度）同指标对比，含数据来源标注与一致性结论（V1.1 050：周报/月报按期间对比）'
-      : '报送期间 2026年9月（月度粒度）· 汇总计算 ≤10 秒 · 导出兼容现行周报/月报表样（ZY-HY-TB-050）') + '</div></div>' +
+      ? '周报（周维度）与月报（月维度）同指标对比，含数据来源标注与一致性结论'
+      : '报送期间 2026年9月（月度粒度）· 汇总计算 ≤10 秒 · 导出兼容现行周报/月报表样') + '</div></div>' +
     '  <div class="dsc-page-header__actions">' +
     ((isCompare || isWeekly) ? '' : '<label class="dsc-check"><input type="checkbox"' + (SummaryState.includeSubmitted ? ' checked' : '') + ' onchange="toggleIncludeSubmitted(this)"><span class="dsc-check__box"></span>包含已提交待复核数据</label>') +
     (isWeekly ? '' : '    <button class="dsc-btn dsc-btn--primary" onclick="exportSummary()">导出 Excel</button>') +
@@ -65,11 +65,11 @@ function renderSummaryPage() {
     '</div>' +
 
     '<div class="dsc-coverage-note dsc-mb-md"><span>⚠</span>数据覆盖范围：' + (isWeekly
-      ? '当前期次 ' + week.period + '（' + week.status + '）；周度明细仅展示已提交/已通过数据，历史周只读（展示规则 24）'
+      ? '当前期次 ' + week.period + '（' + week.status + '）；周度明细仅展示已提交/已通过数据，历史周只读'
       : isCompare
       ? '周报来源＝各共享中心 2026年9月第3周（W1~W5）；月报来源＝已通过/已提交单位（D1~D6）；无周报单位（' + WEEKLY_MISSING_UNITS.slice(0, 3).map(id => unitName(id)).join('、') + ' 等）已在月报侧标注"转手工填报"'
-      : '已通过 ' + units.length + '/14 家二级单位（部分汇总已显著标注，验收标准 A6）') +
-    '；率类指标为汇总分子/分母重算值，禁止对率直接平均（业务规则 18）。</div>' +
+      : '已通过 ' + units.length + '/14 家二级单位（部分汇总已显著标注）') +
+    '；率类指标为汇总分子/分母重算值，禁止对率直接平均。</div>' +
 
     '<div class="dsc-dtabs">' + tabs + '</div>' +
     '<div class="dsc-card"><div class="dsc-card__body">' + body + '</div></div>';
@@ -78,7 +78,7 @@ function renderSummaryPage() {
 function switchSummaryTab(ds) { SummaryState.dataset = ds; renderPage('summary'); }
 
 /* ============================================================
-   ② 周报周度明细报表区（PRD 6.1 / 展示规则 24 / 验收 A16）
+   ② 周报周度明细报表区
    期次选择（年度+周次）· W1~W6 六张明细报表 · 月内周趋势 · 覆盖范围标注 · 导出留痕
    ============================================================ */
 function currentWeek() {
@@ -98,7 +98,7 @@ function exportMonthReport() {
   toast('已导出 ' + WEEK_MONTH + ' 月内多周合并报表（含周次列），导出操作已留痕', 'success');
 }
 
-/* 周次数据访问：仅取"已提交/已通过"记录（展示规则 24） */
+/* 周次数据访问：仅取"已提交/已通过"记录 */
 function weekRecsOf(store, wCode, useUnits) {
   const subjects = useUnits ? UNITS : SHARED_CENTERS;
   return subjects
@@ -137,18 +137,18 @@ function summaryWeekly() {
     return picker +
       '<div class="dsc-empty" style="padding:var(--space-xxl) 0;"><div class="dsc-empty__icon">🗓️</div>' +
       '<div class="dsc-empty__text">' + week.period + ' 尚未开始（每周五 17:00 截止）</div>' +
-      '<div class="dsc-field-tip dsc-mt-sm">可切换至已提交周次查看 W1~W6 明细；月内周趋势见下方。</div></div>' +
+      '</div>' +
       renderWeekTrend();
   }
 
-  /* 覆盖范围标注（A16：当周存在未提交主体时显著标注应报/已报） */
+  /* 覆盖范围标注 */
   const reported15 = weekRecsOf(store, 'W1', false);
   const missing15 = SHARED_CENTERS.filter(sc => reported15.every(x => x.sub.id !== sc.id));
   const w6Units = weekRecsOf(store, 'W6', true);
   const coverage = '<div class="dsc-coverage-note dsc-mb-md"><span>⚠</span>数据覆盖范围（' + week.period + '）：' +
     'W1~W5 应报 ' + SHARED_CENTERS.length + ' 个主体、已报 ' + reported15.length + ' 个' +
     (missing15.length ? '（未提交：' + missing15.map(s => s.name).join('、') + '）' : '') +
-    '；W6 应报 ' + UNITS.length + ' 家二级单位、已报 ' + w6Units.length + ' 家。仅展示已提交/已通过数据，历史周只读（展示规则 24）。</div>';
+    '；W6 应报 ' + UNITS.length + ' 家二级单位、已报 ' + w6Units.length + ' 家。仅展示已提交/已通过数据，历史周只读。</div>';
 
   const wTabs = '<div class="dsc-dtabs">' + W_DATASET_ORDER.map(w =>
     '<div class="dsc-dtab' + (SummaryState.wTab === w ? ' dsc-dtab--active' : '') + '" onclick="switchWeekTab(\'' + w + '\')">' +
@@ -202,7 +202,7 @@ function weekReportW1(store, week) {
     '<thead><tr><th>填报主体</th>' + labels.map(l => '<th class="dsc-sum-table__num">' + l + '</th>').join('') +
     '<th class="dsc-sum-table__num">采购成本降低额（元）</th><th class="dsc-sum-table__num">集采金额合计（元）</th><th class="dsc-sum-table__num">采购成本降低率</th></tr></thead>' +
     '<tbody>' + (rows || '<tr><td colspan="9">本周暂无已提交数据</td></tr>') + total + '</tbody></table></div>' +
-    '<div class="dsc-field-tip dsc-mt-sm">跨主体合计：数值类求和；率类按分子/分母重算（如降低率 = Σ降低额 ÷ Σ集采金额），禁止对率平均（规则 18）。</div>' +
+    '<div class="dsc-field-tip dsc-mt-sm">跨主体合计：数值类求和；率类按分子/分母重算（如降低率 = Σ降低额 ÷ Σ集采金额），禁止对率平均。</div>' +
     '<div class="dsc-mt-lg">' + texts + '</div>';
 }
 
@@ -343,7 +343,7 @@ function weekReportW4(store, week) {
     '<div class="dsc-table-wrapper" style="overflow-x:auto;"><table class="dsc-table" style="white-space:nowrap;">' +
     '<thead><tr><th>序号</th>' + cols.map(k => '<th>' + esc((W4_COLUMNS.find(c => c.key === k) || {}).label || k) + '</th>').join('') + '</tr></thead>' +
     '<tbody>' + (list || '<tr><td colspan="15">本周暂无已提交数据</td></tr>') + '</tbody></table></div>' +
-    '<div class="dsc-field-tip dsc-mt-sm">联系人、电话、邮箱按组织权限脱敏展示（业务规则 22），导出留痕；共享中心仅可见本单位明细，局级可见全局。</div>';
+    '<div class="dsc-field-tip dsc-mt-sm">联系人、电话、邮箱按组织权限脱敏展示，导出留痕。</div>';
 }
 
 /* ---------- W5 调拨台账：明细 + 按调入组织汇总 ---------- */
@@ -372,13 +372,13 @@ function weekReportW5(store, week) {
     '<div class="dsc-table-wrapper" style="overflow-x:auto;"><table class="dsc-table" style="white-space:nowrap;">' +
     '<thead><tr><th>序号</th>' + cols.map(k => '<th>' + esc((W5_COLUMNS.find(c => c.key === k) || {}).label || k) + '</th>').join('') + '</tr></thead>' +
     '<tbody>' + (list || '<tr><td colspan="11">—</td></tr>') + '</tbody></table></div>' +
-    '<div class="dsc-field-tip dsc-mt-sm">调入价格按调入组织汇总后，自动带出至月报 D3 调出资产原值金额（ZY-HY-TB-070）。</div>';
+    '<div class="dsc-field-tip dsc-mt-sm">调入价格按调入组织汇总后，自动带出至月报 D3 调出资产原值金额。</div>';
 }
 
 /* ---------- W6 项目风险全景：按项目明细 + 按单位风险统计 ---------- */
 function weekReportW6(store, week) {
   let all = weekRowsOf(store, 'W6', true);
-  /* 权限（PRD 6.1.6）：二级单位可见本单位 W6 明细及涉及本单位的汇总行 */
+  /* 权限：二级单位可见本单位 W6 明细及涉及本单位的汇总行 */
   const restrictUnit = (AppState.role.id === 'filler' || AppState.role.id === 'auditor') ? 'U01' : null;
   const visible = restrictUnit ? all.filter(r => r._ownerId === restrictUnit) : all;
 
@@ -432,7 +432,7 @@ function weekReportW6(store, week) {
     '<div class="dsc-table-wrapper" style="overflow-x:auto;"><table class="dsc-table" style="white-space:nowrap;">' +
     '<thead><tr><th>序号</th><th>二级单位</th>' + cols.map(k => '<th>' + esc((W6_COLUMNS.find(c => c.key === k) || {}).label || k) + '</th>').join('') + '</tr></thead>' +
     '<tbody>' + (list || '<tr><td colspan="25">—</td></tr>') + '</tbody></table></div>' +
-    '<div class="dsc-field-tip dsc-mt-sm">W6 率类按单位汇总后作为月报 D1/D2 一致性校验基准（金额求和、率类按采购总额加权，规则 18）。</div>';
+    '<div class="dsc-field-tip dsc-mt-sm">W6 率类按单位汇总后作为月报 D1/D2 一致性校验基准（金额求和、率类按采购总额加权）。</div>';
 }
 
 /* ---------- 月内周趋势视图（关键指标各周对比） ---------- */
@@ -468,13 +468,13 @@ function renderWeekTrend() {
     '<th class="dsc-sum-table__num">在建项目数</th><th class="dsc-sum-table__num">集采完成个数</th><th class="dsc-sum-table__num">预计降本额（元）</th><th class="dsc-sum-table__num">采购成本降低率（重算）</th></tr></thead>' +
     '<tbody>' + rows + '</tbody></table></div>' +
     '<div class="dsc-mt-md">' + bars + '</div>' +
-    '<div class="dsc-field-tip dsc-mt-sm">趋势口径：W1 数值区跨主体汇总；率类按各周分子/分母重算；历史周为快照只读（展示规则 24）。</div>' +
+    '<div class="dsc-field-tip dsc-mt-sm">趋势口径：W1 数值区跨主体汇总；率类按各周分子/分母重算；历史周为快照只读。</div>' +
     '</div></div>';
 }
 
 
 /* ============================================================
-   周报 / 月报对比（V1.1 050 新增）
+   周报 / 月报对比
    ============================================================ */
 function summaryCompare() {
   const wstore = WEEKLY_STORE[FILL_TASK_W] || {};
@@ -514,8 +514,8 @@ function summaryCompare() {
   const judge = (w, m, unit) => {
     if (!w) return { tag: '<span class="dsc-tag dsc-tag--default">周报无数值</span>', note: '周报侧无数据，月报按手工填报处理' };
     const dev = (m - w) / w;
-    if (m < w) return { tag: '<span class="dsc-tag dsc-tag--danger">月报＜周报，阻断</span>', note: '月报值小于周报值，提交被阻断（V-G07）' };
-    if (Math.abs(dev) > CONSISTENCY_CONFIG.deviationWarn) return { tag: '<span class="dsc-tag dsc-tag--warning">偏差 ' + (dev * 100).toFixed(1) + '%，提示核对</span>', note: '偏差超 ±5%，提示核对口径（V-G08，不阻断）' };
+    if (m < w) return { tag: '<span class="dsc-tag dsc-tag--danger">月报＜周报，阻断</span>', note: '月报值小于周报值，提交被阻断' };
+    if (Math.abs(dev) > CONSISTENCY_CONFIG.deviationWarn) return { tag: '<span class="dsc-tag dsc-tag--warning">偏差 ' + (dev * 100).toFixed(1) + '%，提示核对</span>', note: '偏差超 ±5%，提示核对口径' };
     return { tag: '<span class="dsc-tag dsc-tag--success">一致（偏差 ' + (dev * 100).toFixed(1) + '%）</span>', note: '周月口径一致' };
   };
 
@@ -538,7 +538,7 @@ function summaryCompare() {
 
   /* 数据来源标注（含周报缺失单位） */
   const missingNote = '<div class="dsc-field-tip dsc-mt-sm">数据来源标注：月报自动带出字段来源＝' + weekLabel +
-    '；当月无已提交周报的单位（' + WEEKLY_MISSING_UNITS.map(id => unitName(id)).join('、') + '）已转手工填报，报表按单位标注来源（A13）。</div>';
+    '；当月无已提交周报的单位（' + WEEKLY_MISSING_UNITS.map(id => unitName(id)).join('、') + '）已转手工填报，报表按单位标注来源。</div>';
 
   return '<div class="dsc-stat-row dsc-mb-md">' +
     statCard('周报汇总（9月第3周）', fmtMoney(wJc) + ' 元', 'dsc-stat-card__value--primary', '集采金额（W3 汇总）') +
@@ -610,7 +610,7 @@ function summaryD1(units) {
     '<div class="dsc-table-wrapper" style="overflow-x:auto;"><table class="dsc-table dsc-sum-table" style="white-space:nowrap;">' +
     '<thead><tr><th>二级单位</th><th>采购总金额（元）</th><th>采购效益总额（元）</th><th>综合采购效益率</th><th>综合成本降低率</th><th>中国资源引入率</th><th>集采率</th><th>直采率</th></tr></thead>' +
     '<tbody>' + (trs || '<tr><td colspan="8">暂无已通过数据</td></tr>') + total + '</tbody></table></div>' +
-    '<div class="dsc-field-tip dsc-mt-sm">率类全部为汇总后分子/分母重算值（如综合采购效益率 = Σ效益额 ÷ Σ对应业主收入），禁止对各单率值求平均；分母为 0 显示"/"（V-T01）。</div>';
+    '';
 }
 
 /* ============================================================
@@ -739,8 +739,8 @@ function summaryD4(units) {
     statCard('持一级建造师', pool.filter(r => r.cert2).length + ' 人', '', '持证情况结构化统计') +
     '</div>' +
     '<div class="dsc-form-row dsc-form-row--2">' +
-    '<div class="dsc-form-section"><div class="dsc-form-section__head"><span>按从事岗位分布</span><span class="dsc-form-section__tag">Q2 待收敛</span></div><div class="dsc-form-section__body" style="display:block;">' + bar(byPost, pool.length) +
-    '<div class="dsc-field-tip">"采购物资管理"归类待业务确认后字典收敛为两类（待决事项 Q2）</div></div></div>' +
+    '<div class="dsc-form-section"><div class="dsc-form-section__head"><span>按从事岗位分布</span></div><div class="dsc-form-section__body" style="display:block;">' + bar(byPost, pool.length) +
+    '</div></div>' +
     '<div class="dsc-form-section"><div class="dsc-form-section__head"><span>按学历分布</span></div><div class="dsc-form-section__body" style="display:block;">' + bar(byEdu, pool.length) + '</div></div>' +
     '</div>' +
     '<div class="dsc-form-section"><div class="dsc-form-section__head"><span>按单位统计</span></div>' +
@@ -800,7 +800,7 @@ function summaryD5(units) {
   return '<div class="dsc-stat-row dsc-mb-md">' +
     statCard('原始记录数', raw.length + ' 条', '', units.length + ' 家单位录入') +
     statCard('自动去重后', dedup.length + ' 家', 'dsc-stat-card__value--primary', '按"供应商名称+注册地"自动去重（100% 替代人工）') +
-    statCard('跨单位重复', removed + ' 条', 'dsc-stat-card__value--warning', '与人工"已去重"口径一致（A4）') +
+    statCard('跨单位重复', removed + ' 条', 'dsc-stat-card__value--warning', '与人工"已去重"口径一致') +
     statCard('A级占比', ((byRating['A级-推荐使用'] || 0) / (dedup.length || 1) * 100).toFixed(1) + '%', 'dsc-stat-card__value--success', '评级分布统计') +
     '</div>' +
     '<div class="dsc-form-row dsc-form-row--2 dsc-mb-md">' +
@@ -845,5 +845,5 @@ function summaryD6(units) {
     '<div class="dsc-table-wrapper" style="overflow-x:auto;"><table class="dsc-table" style="white-space:nowrap;">' +
     '<thead><tr><th>序号</th><th>录入单位</th><th>供货类型</th><th>供应商名称</th><th>注册地</th><th>不良行为描述</th><th>禁用起始</th><th>期限（月）</th><th>禁用到期日（计算）</th><th>状态</th></tr></thead>' +
     '<tbody>' + (list || '<tr><td colspan="10">暂无已通过数据</td></tr>') + '</tbody></table></div>' +
-    '<div class="dsc-field-tip dsc-mt-sm">禁用到期日由系统按"禁用起始时间 + 期限"自动计算，到期自动提醒复核是否移出不合格库；与 D5 合格库交叉校验（V-C03）。</div>';
+    '';
 }

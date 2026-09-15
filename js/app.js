@@ -42,7 +42,7 @@ function fmtQty(n) {
   return Number(n).toLocaleString('zh-CN', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }
 
-/* 率类显示：分母为 0/空 → "/"（V-T01 容错，杜绝 #DIV/0!） */
+/* 率类显示：分母为 0/空 → "/" */
 function pctDisp(num, den) {
   const n = Number(num), d = Number(den);
   if (!den || d === 0 || isNaN(d)) return '/';
@@ -68,7 +68,7 @@ function fmtDate(d) {
   if (!d) return '/';
   return d.getFullYear() + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(d.getDate()).padStart(2, '0');
 }
-/* 工作年限：起始时间至报送截止日自动计算取整（V-G06） */
+/* 工作年限：起始时间至报送截止日自动计算取整 */
 function workYears(startStr, refStr) {
   const s = parseDate(startStr), r = parseDate(refStr || '2026/09/25');
   if (!s) return null;
@@ -222,7 +222,7 @@ function roleScopeText(role) {
 function renderRoleMenu() {
   const menu = document.getElementById('roleMenu');
   menu.innerHTML =
-    '<div class="dsc-role__menu-tip">视角切换仅作演示：真实系统无此入口，功能权限由「系统功能项」授权控制；左侧菜单为全量展示，不随视角变化</div>' +
+    '<div class="dsc-role__menu-tip">视角切换仅作演示</div>' +
     ROLES.map(r =>
       '<div class="dsc-role__menu-item' + (r.id === AppState.role.id ? ' dsc-role__menu-item--active' : '') + '" onclick="switchRole(\'' + r.id + '\')">' +
       '<span>' + r.name + '</span>' +
